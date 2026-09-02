@@ -56,3 +56,6 @@ next-env.d.ts
 .vercel/
 .idea/
 .vscode/
+
+# Local runtime database
+backend/escrows_store.json

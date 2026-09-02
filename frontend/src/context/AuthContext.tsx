@@ -55,14 +55,29 @@ export async function deriveAddressFromEmail(email: string): Promise<string> {
 interface AuthContextType {
   user: UserAccount | null;
   isAuthenticated: boolean;
+  balance: number;
   loginWithGoogle: (email: string, name?: string, role?: 'client' | 'freelancer') => Promise<UserAccount>;
+  signUpWithGoogle: (email: string, name?: string, role?: 'client' | 'freelancer') => Promise<UserAccount>;
   loginWithDemo: (account: UserAccount) => void;
   logout: () => void;
+  claimFaucet: (amount?: number) => void;
+  resetDemoState: () => void;
+  deductBalance: (amount: number, address?: string) => void;
+  creditBalance: (amount: number, address?: string) => void;
+  isEmailRegistered: (email: string) => boolean;
+  getRegisteredRole: (email: string) => ('client' | 'freelancer' | 'team_member') | null;
   isLoginModalOpen: boolean;
   setIsLoginModalOpen: (open: boolean) => void;
   notification: string | null;
   clearNotification: () => void;
 }
+
+const DEFAULT_INITIAL_BALANCES: Record<string, number> = {
+  '0xaf39410b7ef60d0de77312789647ca1a9989784229b275d5a7866e4a610e7771': 3500, // Alice (Client)
+  '0x7b5a8e23912a7d45129ca01289fe20349b1248a8927164917a4918239a9c1824': 350,  // Bob (Lead Freelancer)
+  '0x3918a7c00a6f40db9693ad1415d880f9879785369065b2370007891866ad34a2': 150,  // Charlie (UI)
+  '0x9928198a27491724018274019284710294719284710294710294710294710294': 100,  // David (Backend)
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -70,6 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserAccount | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+  const [registeredUsers, setRegisteredUsers] = useState<Record<string, UserAccount>>({});
+  const [balances, setBalances] = useState<Record<string, number>>(DEFAULT_INITIAL_BALANCES);
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -77,7 +94,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Load persisted user session from localStorage if user previously logged in
+    // Load registered users registry
+    const savedRegistry = localStorage.getItem('suipact_registered_users_v2');
+    let registryMap: Record<string, UserAccount> = {};
+    if (savedRegistry) {
+      try {
+        registryMap = JSON.parse(savedRegistry);
+      } catch (e) {}
+    }
+    // Pre-populate demo accounts in registry if not present
+    PRESET_DEMO_ACCOUNTS.forEach((demo) => {
+      const cleanEmail = demo.email.toLowerCase();
+      if (!registryMap[cleanEmail]) {
+        registryMap[cleanEmail] = demo;
+      }
+    });
+    setRegisteredUsers(registryMap);
+    localStorage.setItem('suipact_registered_users_v2', JSON.stringify(registryMap));
+
+    // Load wallet balances
+    const savedBalances = localStorage.getItem('suipact_wallet_balances_v2');
+    if (savedBalances) {
+      try {
+        const parsedBalances = JSON.parse(savedBalances);
+        setBalances((prev) => ({ ...prev, ...parsedBalances }));
+      } catch (e) {}
+    }
+
+    // Load active session
     const saved = localStorage.getItem('suipact_user_session');
     if (saved) {
       try {
@@ -90,20 +134,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('suipact_user_session');
       }
     }
-    // Default to unauthenticated guest (no user logged in yet)
     setUser(null);
   }, []);
 
-  const loginWithGoogle = async (
+  const saveBalances = (newBalances: Record<string, number>) => {
+    setBalances(newBalances);
+    localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(newBalances));
+  };
+
+  const isEmailRegistered = (email: string): boolean => {
+    return !!registeredUsers[email.trim().toLowerCase()];
+  };
+
+  const getRegisteredRole = (email: string) => {
+    const found = registeredUsers[email.trim().toLowerCase()];
+    return found ? found.role : null;
+  };
+
+  const signUpWithGoogle = async (
     email: string,
     name?: string,
     role: 'client' | 'freelancer' = 'client'
   ): Promise<UserAccount> => {
     const cleanEmail = email.trim().toLowerCase();
-    const displayName = name?.trim() || cleanEmail.split('@')[0] || 'Google zkLogin User';
+    if (registeredUsers[cleanEmail]) {
+      const existing = registeredUsers[cleanEmail];
+      throw new Error(`Email is already registered as ${existing.role.toUpperCase()}. Please sign in instead.`);
+    }
+
+    const displayName = name?.trim() || cleanEmail.split('@')[0] || 'Google User';
     const derivedAddress = await deriveAddressFromEmail(cleanEmail);
 
-    const zkUser: UserAccount = {
+    const newUser: UserAccount = {
       address: derivedAddress,
       name: displayName,
       email: cleanEmail,
@@ -111,11 +173,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       authType: 'zklogin',
     };
 
-    setUser(zkUser);
-    localStorage.setItem('suipact_user_session', JSON.stringify(zkUser));
+    const updatedRegistry = { ...registeredUsers, [cleanEmail]: newUser };
+    setRegisteredUsers(updatedRegistry);
+    localStorage.setItem('suipact_registered_users_v2', JSON.stringify(updatedRegistry));
+
+    // Initialize starting balance (Client gets $2,500 USDC testnet, Freelancer gets $250 USDC)
+    const startingBalance = role === 'client' ? 2500 : 250;
+    const updatedBalances = { ...balances, [derivedAddress]: startingBalance };
+    saveBalances(updatedBalances);
+
+    setUser(newUser);
+    localStorage.setItem('suipact_user_session', JSON.stringify(newUser));
     setIsLoginModalOpen(false);
-    showNotification(`Signed in with Google as ${displayName} (${cleanEmail})`);
-    return zkUser;
+    showNotification(`Account created! Welcome, ${displayName} (${role.toUpperCase()})`);
+    return newUser;
+  };
+
+  const loginWithGoogle = async (
+    email: string,
+    name?: string,
+    role?: 'client' | 'freelancer'
+  ): Promise<UserAccount> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = registeredUsers[cleanEmail];
+
+    if (!existing) {
+      if (role) {
+        return signUpWithGoogle(email, name, role);
+      }
+      throw new Error(`Account not found for ${cleanEmail}. Please switch to "Create Account" to choose your role.`);
+    }
+
+    setUser(existing);
+    localStorage.setItem('suipact_user_session', JSON.stringify(existing));
+    setIsLoginModalOpen(false);
+    showNotification(`Welcome back, ${existing.name}! Logged in as ${existing.role.toUpperCase()}`);
+    return existing;
   };
 
   const loginWithDemo = (account: UserAccount) => {
@@ -131,14 +224,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showNotification('Signed out successfully.');
   };
 
+  const claimFaucet = (amount = 1000) => {
+    if (!user?.address) return;
+    const addr = user.address.toLowerCase();
+    setBalances((prev) => {
+      const current = prev[addr] ?? DEFAULT_INITIAL_BALANCES[addr] ?? 0;
+      const updated = current + amount;
+      const newBalances = { ...prev, [addr]: updated };
+      localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(newBalances));
+      return newBalances;
+    });
+    showNotification(`💰 +$${amount.toLocaleString()} Testnet USDC deposited to your wallet!`);
+  };
+
+  const resetDemoState = () => {
+    localStorage.removeItem('suipact_wallet_balances_v2');
+    localStorage.removeItem('suipact_escrows_v3');
+    setBalances(DEFAULT_INITIAL_BALANCES);
+    localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(DEFAULT_INITIAL_BALANCES));
+    showNotification('🔄 Demo wallet balances and state reset to initial pristine values!');
+  };
+
+  const deductBalance = (amount: number, address?: string) => {
+    const targetAddr = (address || user?.address)?.toLowerCase();
+    if (!targetAddr) return;
+    setBalances((prev) => {
+      const current = prev[targetAddr] ?? DEFAULT_INITIAL_BALANCES[targetAddr] ?? 0;
+      const updated = Math.max(0, current - amount);
+      const newBalances = { ...prev, [targetAddr]: updated };
+      localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(newBalances));
+      return newBalances;
+    });
+  };
+
+  const creditBalance = (amount: number, address?: string) => {
+    const targetAddr = (address || user?.address)?.toLowerCase();
+    if (!targetAddr) return;
+    setBalances((prev) => {
+      const current = prev[targetAddr] ?? DEFAULT_INITIAL_BALANCES[targetAddr] ?? 0;
+      const updated = current + amount;
+      const newBalances = { ...prev, [targetAddr]: updated };
+      localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(newBalances));
+      return newBalances;
+    });
+  };
+
+  const userAddrClean = user?.address?.toLowerCase() || '';
+  const activeBalance = user
+    ? (balances[userAddrClean] ?? DEFAULT_INITIAL_BALANCES[userAddrClean] ?? (user.role === 'client' ? 2500 : 250))
+    : 0;
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
+        balance: activeBalance,
         loginWithGoogle,
+        signUpWithGoogle,
         loginWithDemo,
         logout,
+        claimFaucet,
+        resetDemoState,
+        deductBalance,
+        creditBalance,
+        isEmailRegistered,
+        getRegisteredRole,
         isLoginModalOpen,
         setIsLoginModalOpen,
         notification,

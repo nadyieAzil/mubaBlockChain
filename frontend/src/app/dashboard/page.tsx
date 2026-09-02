@@ -37,6 +37,78 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
 
   const { status } = escrow;
 
+  // 1. Agreement Signing & Negotiation (Pre-Execution Phase)
+  if (isFreelancer && escrow.agreementStatus === 'pending') {
+    return {
+      escrow,
+      priority: 'urgent',
+      actionLabel: 'Sign Agreement',
+      actionIcon: '📄',
+      description: `Client deposited funds. Review agreement terms and accept to begin work.`,
+    };
+  }
+
+  if (isFreelancer && escrow.agreementStatus === 'client_approved') {
+    return {
+      escrow,
+      priority: 'urgent',
+      actionLabel: 'Sign Approved Agreement',
+      actionIcon: '✍️',
+      description: `Client approved your terms ($${escrow.totalAmount} USDC)! Review and sign agreement to begin work.`,
+    };
+  }
+
+  if (isClient && escrow.agreementStatus === 'client_approved') {
+    return {
+      escrow,
+      priority: 'waiting',
+      actionLabel: 'Awaiting Freelancer Signature',
+      actionIcon: '⏳',
+      description: `You approved terms ($${escrow.totalAmount} USDC). Waiting for Lead Freelancer final acceptance.`,
+    };
+  }
+
+  if (isFreelancer && escrow.agreementStatus === 'negotiating') {
+    return {
+      escrow,
+      priority: 'waiting',
+      actionLabel: 'Proposal Pending',
+      actionIcon: '⏳',
+      description: `Counter-offer ($${escrow.totalAmount} USDC) submitted. Waiting for Client decision.`,
+    };
+  }
+
+  if (isClient && escrow.agreementStatus === 'negotiating') {
+    return {
+      escrow,
+      priority: 'urgent',
+      actionLabel: 'Review Counter-Offer',
+      actionIcon: '💬',
+      description: `Freelancer requested rate/terms adjustment: "${escrow.negotiationNotes || ''}"`,
+    };
+  }
+
+  if (isClient && escrow.agreementStatus === 'pending') {
+    return {
+      escrow,
+      priority: 'waiting',
+      actionLabel: 'Awaiting Freelancer',
+      actionIcon: '⏳',
+      description: `Deposit locked. Waiting for Lead Freelancer to review and accept the agreement.`,
+    };
+  }
+
+  // 2. Active Execution Phase (Agreement must be accepted)
+  if (isFreelancer && escrow.isRevisionRequested) {
+    return {
+      escrow,
+      priority: 'urgent',
+      actionLabel: 'Rework Requested',
+      actionIcon: '🔄',
+      description: `Client requested revisions on your deliverable. Click to inspect comments and resubmit.`,
+    };
+  }
+
   if (isClient && status === STATUS_CODES.DELIVERED) {
     return {
       escrow,
@@ -47,13 +119,13 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
     };
   }
 
-  if (isFreelancer && status === STATUS_CODES.LOCKED) {
+  if (isFreelancer && status === STATUS_CODES.LOCKED && escrow.agreementStatus === 'accepted') {
     return {
       escrow,
       priority: 'urgent',
       actionLabel: 'Submit Deliverable',
       actionIcon: '🟡',
-      description: `Funds are locked. Submit your proof of work to trigger payment review.`,
+      description: `Agreement locked. Work in progress — submit deliverable proof when ready.`,
     };
   }
 
@@ -67,13 +139,13 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
     };
   }
 
-  if (isClient && status === STATUS_CODES.LOCKED) {
+  if (isClient && status === STATUS_CODES.LOCKED && escrow.agreementStatus === 'accepted') {
     return {
       escrow,
       priority: 'waiting',
       actionLabel: 'Awaiting Delivery',
       actionIcon: '⏳',
-      description: `Funds locked. Waiting for ${escrow.freelancerName || 'freelancer'} to submit deliverable.`,
+      description: `Agreement locked. Waiting for ${escrow.freelancerName || 'freelancer'} to complete and submit work.`,
     };
   }
 
@@ -83,7 +155,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       priority: 'waiting',
       actionLabel: 'Awaiting Client Approval',
       actionIcon: '⏳',
-      description: 'You submitted your proof. Waiting for client to approve and release payment.',
+      description: 'Deliverable submitted. Waiting for client to review and release payment.',
     };
   }
 

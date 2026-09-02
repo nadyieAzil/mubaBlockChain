@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth, PRESET_DEMO_ACCOUNTS, deriveAddressFromEmail } from '@/context/AuthContext';
@@ -137,43 +137,87 @@ const GoogleConsentScreen: React.FC<GoogleConsentProps> = ({ onConfirm, onCancel
 };
 
 
-// ── Main Login Form ─────────────────────────────────────────────────
+// ── Main Login / Sign Up Form ───────────────────────────────────────
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/dashboard';
+  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
 
-  const { loginWithGoogle, loginWithDemo } = useAuth();
+  const { loginWithGoogle, signUpWithGoogle, loginWithDemo, isEmailRegistered, getRegisteredRole } = useAuth();
 
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>(initialMode);
   const [emailInput, setEmailInput] = useState('');
   const [nameInput, setNameInput] = useState('');
   const [roleInput, setRoleInput] = useState<'client' | 'freelancer'>('client');
   const [derivedPreview, setDerivedPreview] = useState<string>('');
+  const [detectedRole, setDetectedRole] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showGoogleConsent, setShowGoogleConsent] = useState(false);
 
+  // Sync mode if query param changes
+  useEffect(() => {
+    const qMode = searchParams.get('mode');
+    if (qMode === 'signup' || qMode === 'signin') {
+      setAuthMode(qMode);
+      setFormError(null);
+    }
+  }, [searchParams]);
+
   const handleEmailChange = async (val: string) => {
     setEmailInput(val);
+    setFormError(null);
     if (val.includes('@') && val.length > 5) {
       const addr = await deriveAddressFromEmail(val);
       setDerivedPreview(addr);
+      const role = getRegisteredRole(val);
+      setDetectedRole(role);
     } else {
       setDerivedPreview('');
+      setDetectedRole(null);
     }
   };
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emailInput.trim() || !emailInput.includes('@')) return;
+    setFormError(null);
+    if (!emailInput.trim() || !emailInput.includes('@')) {
+      setFormError('Please enter a valid Google email address.');
+      return;
+    }
+
+    if (authMode === 'signin') {
+      const isRegistered = isEmailRegistered(emailInput);
+      if (!isRegistered) {
+        setFormError(`Email "${emailInput}" is not registered yet. Please switch to the "Sign Up" tab above to choose your role.`);
+        return;
+      }
+    } else {
+      const isRegistered = isEmailRegistered(emailInput);
+      if (isRegistered) {
+        const role = getRegisteredRole(emailInput);
+        setFormError(`This email is already registered as ${role?.toUpperCase()}. Please switch to the "Sign In" tab to log in.`);
+        return;
+      }
+    }
+
     setShowGoogleConsent(true);
   };
 
   const handleConsentConfirm = async (email: string, name: string) => {
     setShowGoogleConsent(false);
     setLoading(true);
+    setFormError(null);
     try {
-      await loginWithGoogle(email, name || nameInput || email.split('@')[0], roleInput);
+      if (authMode === 'signup') {
+        await signUpWithGoogle(email, name || nameInput || email.split('@')[0], roleInput);
+      } else {
+        await loginWithGoogle(email);
+      }
       router.push(redirectUrl);
+    } catch (err: any) {
+      setFormError(err.message || 'Authentication error.');
     } finally {
       setLoading(false);
     }
@@ -203,76 +247,149 @@ function LoginForm() {
       <div className="w-full max-w-5xl rounded-3xl border border-white/80 bg-white shadow-2xl shadow-blue-200/50 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden">
 
         {/* ── Left: Form ── */}
-        <div className="lg:col-span-6 flex flex-col justify-center px-8 py-10 space-y-6">
-          {/* Header */}
+        <div className="lg:col-span-6 flex flex-col justify-center px-8 py-10 space-y-5">
+          {/* Brand header */}
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-3">
               <img src="/logo.png" alt="SuiPact Logo" className="h-7 w-7 object-contain" />
               <span className="text-sm font-extrabold text-slate-800">SuiPact</span>
               <span className="rounded bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-700">Sui Testnet</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">Hello Again!</h1>
-            <p className="text-sm text-slate-500">Sign in to your zero-gas stablecoin escrow workspace</p>
+
+            {/* Mode Switcher Tabs */}
+            <div className="flex rounded-2xl bg-slate-100 p-1 border border-slate-200 mb-2">
+              <button
+                type="button"
+                onClick={() => { setAuthMode('signin'); setFormError(null); }}
+                className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all ${
+                  authMode === 'signin' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                🔑 Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthMode('signup'); setFormError(null); }}
+                className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all ${
+                  authMode === 'signup' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                ✨ Create Account (Sign Up)
+              </button>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+              {authMode === 'signin' ? 'Welcome Back!' : 'Create Your Account'}
+            </h1>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              {authMode === 'signin'
+                ? 'Enter your registered Google email. Role is detected automatically.'
+                : 'Sign up with Google to set your permanent role and derive your $0 gas Sui wallet.'}
+            </p>
           </div>
 
+          {/* Error Alert */}
+          {formError && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-900 flex items-start gap-2 animate-fade-in">
+              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1">{formError}</div>
+            </div>
+          )}
+
           {/* Email Form */}
-          <form onSubmit={handleEmailSubmit} className="space-y-3.5">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Google Account Email</label>
               <input
                 type="email"
                 required
-                placeholder="Google account email"
+                placeholder="e.g. name@gmail.com"
                 value={emailInput}
                 onChange={(e) => handleEmailChange(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="text"
-                placeholder="Display name"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none transition-all"
-              />
-              <select
-                value={roleInput}
-                onChange={(e) => setRoleInput(e.target.value as any)}
-                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none transition-all"
-              >
-                <option value="client">💼 Client (Buyer)</option>
-                <option value="freelancer">🎨 Freelancer (Seller)</option>
-              </select>
-            </div>
+            {/* Sign Up Fields: Display Name & Role Selection */}
+            {authMode === 'signup' ? (
+              <div className="space-y-3 pt-1 animate-fade-in">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Your Full Name / Company</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Amir Hakim"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Select Your Primary Role</label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setRoleInput('client')}
+                      className={`p-3 rounded-2xl border text-left transition-all ${
+                        roleInput === 'client'
+                          ? 'border-blue-500 bg-blue-50/70 ring-2 ring-blue-200'
+                          : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="text-base mb-1">💼</div>
+                      <div className="text-xs font-extrabold text-slate-900">Client</div>
+                      <div className="text-[10px] text-slate-500 leading-tight">Deposit USDC, hire & approve</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRoleInput('freelancer')}
+                      className={`p-3 rounded-2xl border text-left transition-all ${
+                        roleInput === 'freelancer'
+                          ? 'border-blue-500 bg-blue-50/70 ring-2 ring-blue-200'
+                          : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="text-base mb-1">🎨</div>
+                      <div className="text-xs font-extrabold text-slate-900">Freelancer</div>
+                      <div className="text-[10px] text-slate-500 leading-tight">Deliver proof, receive split payouts</div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* In Sign In mode: Show auto-detected role banner if email is recognized */
+              detectedRole && (
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 flex items-center justify-between animate-fade-in text-xs font-bold text-emerald-800">
+                  <span>Detected Role:</span>
+                  <span className="uppercase px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px]">
+                    {detectedRole === 'client' ? '💼 Client' : '🎨 Freelancer'}
+                  </span>
+                </div>
+              )
+            )}
 
             {/* Derived Address Preview */}
             {derivedPreview && (
               <div className="rounded-xl bg-blue-50 border border-blue-100 p-3 animate-fade-in">
-                <div className="text-[10px] font-extrabold uppercase text-blue-600 mb-1">Your Sui zkLogin Address (Derived):</div>
+                <div className="text-[10px] font-extrabold uppercase text-blue-600 mb-0.5">Your Sui zkLogin Address (Derived):</div>
                 <div className="font-mono text-[11px] text-slate-700 break-all">{derivedPreview}</div>
               </div>
             )}
 
-            {/* Sign In Button */}
+            {/* Main Action Button */}
             <button
               type="submit"
               disabled={loading || !emailInput}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition-all disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white' }}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] py-3.5 text-xs font-extrabold text-white shadow-lg shadow-blue-600/30 disabled:opacity-50 transition-all"
             >
               {loading ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Connecting to Google...</>
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : authMode === 'signup' ? (
+                'Register & Launch zkLogin'
               ) : (
-                <>
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-                    <path fill="white" fillOpacity="0.9" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="white" fillOpacity="0.7" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="white" fillOpacity="0.5" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="white" fillOpacity="0.3" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  Continue with Google
-                </>
+                'Sign In with Google zkLogin'
               )}
             </button>
           </form>

@@ -12,6 +12,12 @@ export interface Recipient {
   name?: string;
 }
 
+export interface ReworkNote {
+  author: string;
+  text: string;
+  timestamp: string;
+}
+
 export interface EscrowItem {
   id: string;
   client: string;
@@ -26,30 +32,47 @@ export interface EscrowItem {
   clientAgrees: boolean;
   freelancerAgrees: boolean;
   createdAt: string;
-  isOnChain?: boolean; // true = real Sui object ID, false = seed demo data
+  isOnChain?: boolean;
+  scopeDescription?: string;
+  attachedDocumentUrl?: string;
+  attachedDocumentName?: string;
+  deliverableAttachmentUrl?: string;
+  deliverableAttachmentName?: string;
+  agreementStatus: 'pending' | 'accepted' | 'rejected' | 'negotiating' | 'client_approved';
+  agreementRejectReason?: string;
+  negotiationNotes?: string;
+  originalTotalAmount?: number;
+  originalRecipients?: Recipient[];
+  proposedAmount?: number;
+  proposedRecipients?: Recipient[];
+  reworkComments?: ReworkNote[];
+  isRevisionRequested?: boolean;
+  cancelledWithPenalty?: boolean;
+  penaltyAmount?: number;
   txHistory: {
     action: string;
     digest: string;
     timestamp: string;
-    isReal?: boolean; // false = demo seed digest, true = live Sui tx
+    isReal?: boolean;
   }[];
 }
 
-// Demo seed data — pre-populated for first-time demo judges
-// These use hardcoded data and the original v1 package escrow objects
+// Demo seed data — Bob Vance has the correct Lead Freelancer address so testing works out of the box!
 const INITIAL_ESCROWS: EscrowItem[] = [
   {
     id: '0x3781294817293817294817294817293817294817293817294817293817294817',
     client: '0xaf39410b7ef60d0de77312789647ca1a9989784229b275d5a7866e4a610e7771',
     clientName: 'Alice Corp',
-    leadFreelancer: '0xaf39410b7ef60d0de77312789647ca1a9989784229b275d5a7866e4a610e7771',
+    leadFreelancer: '0x7b5a8e23912a7d45129ca01289fe20349b1248a8927164917a4918239a9c1824',
     freelancerName: 'Bob Vance',
     title: 'Sui zkLogin Payment Integration & Landing Page',
+    scopeDescription: 'Full responsive Web3 landing page with Google zkLogin onboarding, team split distribution, and smart contract audit.',
     totalAmount: 1500,
     status: STATUS_CODES.DELIVERED,
+    agreementStatus: 'accepted',
     deliveryProofUri: 'https://github.com/suipact/core-mvp/pull/42',
     recipients: [
-      { recipient: '0xaf39410b7ef60d0de77312789647ca1a9989784229b275d5a7866e4a610e7771', name: 'Bob Vance (Lead)', percentageBasisPoints: 6000 },
+      { recipient: '0x7b5a8e23912a7d45129ca01289fe20349b1248a8927164917a4918239a9c1824', name: 'Bob Vance (Lead)', percentageBasisPoints: 6000 },
       { recipient: '0x3918a7c00a6f40db9693ad1415d880f9879785369065b2370007891866ad34a2', name: 'Charlie UI (Designer)', percentageBasisPoints: 2500 },
       { recipient: '0x9928198a27491724018274019284710294719284710294710294710294710294', name: 'David Backend (Engineer)', percentageBasisPoints: 1500 },
     ],
@@ -59,6 +82,7 @@ const INITIAL_ESCROWS: EscrowItem[] = [
     isOnChain: false,
     txHistory: [
       { action: 'Escrow Created & Deposit Locked', digest: '3teRC52TQvDgh9YAVmmoDJvQqMtgUzzpnJgA5QqtQTYf', timestamp: '2026-08-28T14:30:00Z', isReal: true },
+      { action: 'Pact Agreement Accepted by Lead Freelancer', digest: '89aPactAcceptLeadBobVance771928371928471029471928', timestamp: '2026-08-28T15:00:00Z', isReal: false },
       { action: 'Deliverable Submitted', digest: '7XqB2n9zWvJmKpL8RtY1sEuFoGh4DcVa3Qi5WeTyUiPo', timestamp: '2026-08-28T18:15:00Z', isReal: false },
     ],
   },
@@ -66,14 +90,16 @@ const INITIAL_ESCROWS: EscrowItem[] = [
     id: '0x5928192847192847192847192847192847192847192847192847192847192847',
     client: '0xaf39410b7ef60d0de77312789647ca1a9989784229b275d5a7866e4a610e7771',
     clientName: 'Alice Corp',
-    leadFreelancer: '0xaf39410b7ef60d0de77312789647ca1a9989784229b275d5a7866e4a610e7771',
+    leadFreelancer: '0x7b5a8e23912a7d45129ca01289fe20349b1248a8927164917a4918239a9c1824',
     freelancerName: 'Bob Vance',
     title: 'Brand Identity & Design System Kit',
+    scopeDescription: 'Vector logo package, typography guidelines, Figma token library, and corporate slide deck templates.',
     totalAmount: 850,
     status: STATUS_CODES.LOCKED,
+    agreementStatus: 'pending',
     deliveryProofUri: '',
     recipients: [
-      { recipient: '0xaf39410b7ef60d0de77312789647ca1a9989784229b275d5a7866e4a610e7771', name: 'Bob Vance (Lead)', percentageBasisPoints: 5000 },
+      { recipient: '0x7b5a8e23912a7d45129ca01289fe20349b1248a8927164917a4918239a9c1824', name: 'Bob Vance (Lead)', percentageBasisPoints: 5000 },
       { recipient: '0x3918a7c00a6f40db9693ad1415d880f9879785369065b2370007891866ad34a2', name: 'Charlie UI (Designer)', percentageBasisPoints: 5000 },
     ],
     clientAgrees: false,
@@ -86,53 +112,92 @@ const INITIAL_ESCROWS: EscrowItem[] = [
   },
 ];
 
+interface CreateEscrowParams {
+  title: string;
+  leadFreelancer: string;
+  totalAmount: number;
+  recipients: Recipient[];
+  scopeDescription?: string;
+  attachedDocumentUrl?: string;
+  attachedDocumentName?: string;
+}
+
 interface EscrowContextType {
   escrows: EscrowItem[];
   getEscrowById: (id: string) => EscrowItem | undefined;
-  createEscrow: (params: { title: string; leadFreelancer: string; totalAmount: number; recipients: Recipient[] }) => Promise<EscrowItem>;
-  submitDeliverable: (escrowId: string, proofUri: string) => Promise<void>;
+  createEscrow: (params: CreateEscrowParams) => Promise<EscrowItem>;
+  submitDeliverable: (escrowId: string, proofUri: string, attachmentUrl?: string, attachmentName?: string) => Promise<void>;
   approveAndRelease: (escrowId: string) => Promise<{ digest: string }>;
   refundClient: (escrowId: string) => Promise<{ digest: string }>;
   raiseDispute: (escrowId: string) => Promise<void>;
   agreeToRelease: (escrowId: string) => Promise<void>;
+  acceptAgreement: (escrowId: string) => Promise<void>;
+  rejectAgreement: (escrowId: string, reason: string) => Promise<void>;
+  negotiateAgreement: (escrowId: string, notes: string, proposedAmount?: number, proposedRecipients?: Recipient[]) => Promise<void>;
+  clientApproveNegotiation: (escrowId: string) => Promise<void>;
+  rejectNegotiation: (escrowId: string, clientFeedback?: string) => Promise<void>;
+  requestRework: (escrowId: string, comment: string) => Promise<void>;
+  cancelWithPenalty: (escrowId: string) => Promise<{ digest: string }>;
+  resetEscrows: () => Promise<void>;
 }
 
 const EscrowContext = createContext<EscrowContextType | undefined>(undefined);
 
 export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [escrows, setEscrows] = useState<EscrowItem[]>(INITIAL_ESCROWS);
-  const { user } = useAuth();
+  const { user, deductBalance, creditBalance } = useAuth();
 
   useEffect(() => {
-    const saved = localStorage.getItem('suipact_escrows_v2');
+    // 1. First load from local storage
+    const saved = localStorage.getItem('suipact_escrows_v3');
+    let localList: EscrowItem[] = [];
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        // Merge saved on-chain escrows with seed data (avoid duplicates)
-        const onChainIds = new Set(parsed.map((e: EscrowItem) => e.id));
-        const seeds = INITIAL_ESCROWS.filter(e => !onChainIds.has(e.id));
-        setEscrows([...parsed, ...seeds]);
-      } catch (e) {
-        // fallback to seeds
-      }
+        localList = JSON.parse(saved);
+      } catch (e) {}
     }
+
+    // Merge with INITIAL_ESCROWS
+    const localMap = new Map<string, EscrowItem>();
+    INITIAL_ESCROWS.forEach(e => localMap.set(e.id, e));
+    localList.forEach(e => localMap.set(e.id, e));
+    const merged = Array.from(localMap.values());
+    setEscrows(merged);
+
+    // 2. Fetch from shared backend server if reachable (ensures cross-browser real-time sync)
+    fetch('http://localhost:3001/api/escrows')
+      .then(res => res.json())
+      .then((serverEscrows: EscrowItem[]) => {
+        if (Array.isArray(serverEscrows) && serverEscrows.length > 0) {
+          serverEscrows.forEach(e => localMap.set(e.id, e));
+          const finalMerged = Array.from(localMap.values());
+          setEscrows(finalMerged);
+          localStorage.setItem('suipact_escrows_v3', JSON.stringify(finalMerged));
+        }
+      })
+      .catch(() => {
+        // Backend offline or unreachable, local state active
+      });
   }, []);
 
   const saveEscrows = (items: EscrowItem[]) => {
     setEscrows(items);
-    // Only persist on-chain escrows to avoid stale seed data conflicts
-    const onChain = items.filter(e => e.isOnChain);
-    localStorage.setItem('suipact_escrows_v2', JSON.stringify(onChain));
+    localStorage.setItem('suipact_escrows_v3', JSON.stringify(items));
+    // Asynchronously push to backend store for cross-browser sync
+    items.forEach(item => {
+      fetch('http://localhost:3001/api/escrows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      }).catch(() => {});
+    });
   };
 
   const getEscrowById = (id: string) => escrows.find(e => e.id === id);
 
-  // ── Create Escrow — real PTB call ───────────────────────────────────────
-  const createEscrow = async (params: { title: string; leadFreelancer: string; totalAmount: number; recipients: Recipient[] }) => {
+  // ── Create Escrow ────────────────────────────────────────────────────────
+  const createEscrow = async (params: CreateEscrowParams) => {
     const sender = user?.address || SUI_CONFIG.sponsorAddress;
-
-    // Convert USDC amount to "MIST-like" demo units (1 unit = 1 MIST for SUI)
-    // For demo: treat $1 = 1_000_000 MIST (1000 nano-SUI per dollar)
     const amountMist = Math.floor(params.totalAmount * 1_000_000);
 
     const recipientAddrs = params.recipients.map(r => r.recipient);
@@ -154,9 +219,8 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       createdObjectId = result.createdObjectId ?? null;
       isOnChain = true;
     } catch (err: any) {
-      console.warn('[EscrowContext] On-chain create failed, using local fallback:', err.message);
-      // Local fallback — still shows as functional demo
-      digest = '9xfallback_' + Array.from({ length: 20 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
+      console.warn('[EscrowContext] On-chain create fallback:', err.message);
+      digest = '9xcreate_' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join('');
       isOnChain = false;
     }
 
@@ -170,28 +234,192 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       title: params.title,
       totalAmount: params.totalAmount,
       status: STATUS_CODES.LOCKED,
+      agreementStatus: 'pending',
       deliveryProofUri: '',
       recipients: params.recipients,
       clientAgrees: false,
       freelancerAgrees: false,
       createdAt: new Date().toISOString(),
       isOnChain,
-      txHistory: [{ action: 'Escrow Created & Deposit Locked', digest, timestamp: new Date().toISOString(), isReal: isOnChain }],
+      scopeDescription: params.scopeDescription || '',
+      attachedDocumentUrl: params.attachedDocumentUrl || '',
+      attachedDocumentName: params.attachedDocumentName || '',
+      txHistory: [{ action: 'Escrow Created & Full Deposit Locked', digest, timestamp: new Date().toISOString(), isReal: isOnChain }],
     };
+
+    // Deduct total amount from client wallet balance reactively
+    deductBalance(params.totalAmount, sender);
 
     const updated = [newEscrow, ...escrows];
     saveEscrows(updated);
     return newEscrow;
   };
 
-  // ── Submit Deliverable — real PTB call ──────────────────────────────────
-  const submitDeliverable = async (escrowId: string, proofUri: string) => {
+  // ── Pre-Work Agreement Actions (Accept / Reject / Negotiate) ─────────────
+  const acceptAgreement = async (escrowId: string) => {
+    const target = escrows.find(e => e.id === escrowId);
+    if (!target) throw new Error('Escrow not found.');
+
+    const updated = escrows.map(e => {
+      if (e.id === escrowId) {
+        return {
+          ...e,
+          agreementStatus: 'accepted' as const,
+          txHistory: [
+            ...e.txHistory,
+            {
+              action: 'Agreement Accepted by Lead Freelancer (Execution Unlocked)',
+              digest: '5aAccept' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join(''),
+              timestamp: new Date().toISOString(),
+              isReal: false,
+            },
+          ],
+        };
+      }
+      return e;
+    });
+    saveEscrows(updated);
+  };
+
+  const rejectAgreement = async (escrowId: string, reason: string) => {
+    const target = escrows.find(e => e.id === escrowId);
+    if (!target) throw new Error('Escrow not found.');
+
+    // 100% full refund to client on rejection
+    creditBalance(target.totalAmount, target.client);
+
+    const updated = escrows.map(e => {
+      if (e.id === escrowId) {
+        return {
+          ...e,
+          status: STATUS_CODES.REFUNDED,
+          agreementStatus: 'rejected' as const,
+          agreementRejectReason: reason,
+          txHistory: [
+            ...e.txHistory,
+            {
+              action: `Agreement Declined by Freelancer: "${reason}" (100% Refunded)`,
+              digest: '9rDecline' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join(''),
+              timestamp: new Date().toISOString(),
+              isReal: false,
+            },
+          ],
+        };
+      }
+      return e;
+    });
+    saveEscrows(updated);
+  };
+
+  const negotiateAgreement = async (
+    escrowId: string,
+    notes: string,
+    proposedAmount?: number,
+    proposedRecipients?: Recipient[]
+  ) => {
+    const target = escrows.find(e => e.id === escrowId);
+    if (!target) throw new Error('Escrow not found.');
+
+    const newAmount = proposedAmount && proposedAmount > 0 ? proposedAmount : target.totalAmount;
+    const newRecipients = proposedRecipients && proposedRecipients.length > 0 ? proposedRecipients : target.recipients;
+
+    const updated = escrows.map(e => {
+      if (e.id === escrowId) {
+        return {
+          ...e,
+          originalTotalAmount: target.originalTotalAmount || target.totalAmount,
+          originalRecipients: target.originalRecipients || target.recipients,
+          totalAmount: newAmount,
+          recipients: newRecipients,
+          agreementStatus: 'negotiating' as const,
+          negotiationNotes: notes,
+          txHistory: [
+            ...e.txHistory,
+            {
+              action: `Counter-Offer ($${newAmount} USDC & Revised Split Schedule) Requested: "${notes}"`,
+              digest: '2nNego' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join(''),
+              timestamp: new Date().toISOString(),
+              isReal: false,
+            },
+          ],
+        };
+      }
+      return e;
+    });
+    saveEscrows(updated);
+  };
+
+  const clientApproveNegotiation = async (escrowId: string) => {
+    const target = escrows.find(e => e.id === escrowId);
+    if (!target) throw new Error('Escrow not found.');
+
+    const updated = escrows.map(e => {
+      if (e.id === escrowId) {
+        return {
+          ...e,
+          clientAgrees: true,
+          agreementStatus: 'client_approved' as const,
+          txHistory: [
+            ...e.txHistory,
+            {
+              action: `Client Approved Counter-Offer ($${e.totalAmount} USDC). Awaiting Final Lead Freelancer Acceptance.`,
+              digest: '7aClientApprove' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join(''),
+              timestamp: new Date().toISOString(),
+              isReal: false,
+            },
+          ],
+        };
+      }
+      return e;
+    });
+    saveEscrows(updated);
+  };
+
+  const rejectNegotiation = async (escrowId: string, clientFeedback?: string) => {
+    const target = escrows.find(e => e.id === escrowId);
+    if (!target) throw new Error('Escrow not found.');
+
+    const revertedAmount = target.originalTotalAmount || target.totalAmount;
+    const revertedRecipients = target.originalRecipients || target.recipients;
+    const reasonText = clientFeedback?.trim() || 'Client declined proposed rate; original contract terms maintained.';
+
+    const updated = escrows.map(e => {
+      if (e.id === escrowId) {
+        return {
+          ...e,
+          totalAmount: revertedAmount,
+          recipients: revertedRecipients,
+          agreementStatus: 'pending' as const,
+          negotiationNotes: undefined,
+          txHistory: [
+            ...e.txHistory,
+            {
+              action: `Counter-Offer Declined by Client: "${reasonText}" (Reverted to $${revertedAmount} USDC)`,
+              digest: '3rNegoDeclined' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join(''),
+              timestamp: new Date().toISOString(),
+              isReal: false,
+            },
+          ],
+        };
+      }
+      return e;
+    });
+    saveEscrows(updated);
+  };
+
+  // ── Submit Deliverable ───────────────────────────────────────────────────
+  const submitDeliverable = async (
+    escrowId: string,
+    proofUri: string,
+    attachmentUrl?: string,
+    attachmentName?: string
+  ) => {
     const target = escrows.find(e => e.id === escrowId);
     if (!target) throw new Error('Escrow order not found.');
 
     if (!user?.address || user.address.toLowerCase() !== target.leadFreelancer.toLowerCase()) {
       throw new Error(
-        `Security Violation: Only the designated Lead Freelancer (${target.freelancerName || formatAddress(target.leadFreelancer, 6)}) is authorized to submit deliverable proof.`
+        `Security Violation: Only the designated Lead Freelancer (${target.freelancerName || formatAddress(target.leadFreelancer, 6)}) is authorized to submit deliverables.`
       );
     }
 
@@ -207,16 +435,31 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         throw new Error(err.message || 'Failed to submit deliverable on-chain');
       }
     } else {
-      digest = '8y' + Array.from({ length: 42 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
+      digest = '8ySubmit' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join('');
     }
+
+    const wasRevision = target.isRevisionRequested;
 
     const updated = escrows.map(e => {
       if (e.id === escrowId) {
         return {
           ...e,
           status: STATUS_CODES.DELIVERED,
+          isRevisionRequested: false,
           deliveryProofUri: proofUri,
-          txHistory: [...e.txHistory, { action: 'Deliverable Submitted', digest, timestamp: new Date().toISOString(), isReal }],
+          deliverableAttachmentUrl: attachmentUrl !== undefined ? attachmentUrl : e.deliverableAttachmentUrl,
+          deliverableAttachmentName: attachmentName !== undefined ? attachmentName : e.deliverableAttachmentName,
+          txHistory: [
+            ...e.txHistory,
+            {
+              action: wasRevision
+                ? `Revised Deliverable Submitted: "${proofUri}"${attachmentName ? ` with ${attachmentName}` : ''}`
+                : `Deliverable Submitted: "${proofUri}"${attachmentName ? ` with ${attachmentName}` : ''}`,
+              digest,
+              timestamp: new Date().toISOString(),
+              isReal,
+            },
+          ],
         };
       }
       return e;
@@ -224,14 +467,48 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     saveEscrows(updated);
   };
 
-  // ── Approve & Release — real PTB call ───────────────────────────────────
+  // ── Request Rework / Revision ────────────────────────────────────────────
+  const requestRework = async (escrowId: string, comment: string) => {
+    const target = escrows.find(e => e.id === escrowId);
+    if (!target) throw new Error('Escrow order not found.');
+
+    const newComment: ReworkNote = {
+      author: user?.name || 'Client',
+      text: comment,
+      timestamp: new Date().toISOString(),
+    };
+
+    const updated = escrows.map(e => {
+      if (e.id === escrowId) {
+        const existingComments = e.reworkComments || [];
+        return {
+          ...e,
+          isRevisionRequested: true,
+          reworkComments: [...existingComments, newComment],
+          txHistory: [
+            ...e.txHistory,
+            {
+              action: `Client Requested Revision: "${comment}"`,
+              digest: '7wRework' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join(''),
+              timestamp: new Date().toISOString(),
+              isReal: false,
+            },
+          ],
+        };
+      }
+      return e;
+    });
+    saveEscrows(updated);
+  };
+
+  // ── Approve & Release Payout (Atomically splits to all recipients) ───────
   const approveAndRelease = async (escrowId: string) => {
     const target = escrows.find(e => e.id === escrowId);
     if (!target) throw new Error('Escrow order not found.');
 
     if (!user?.address || user.address.toLowerCase() !== target.client.toLowerCase()) {
       throw new Error(
-        `Security Violation: Only the verified Client (${target.clientName || formatAddress(target.client, 6)}) who deposited the funds is cryptographically authorized to approve release.`
+        `Security Violation: Only the verified Client (${target.clientName || formatAddress(target.client, 6)}) can release payment.`
       );
     }
 
@@ -247,8 +524,14 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         throw new Error(err.message || 'Failed to release payout on-chain');
       }
     } else {
-      digest = '2r' + Array.from({ length: 42 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
+      digest = '2rRelease' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join('');
     }
+
+    // Atomically credit each team recipient's live wallet balance
+    target.recipients.forEach(r => {
+      const payout = (target.totalAmount * r.percentageBasisPoints) / 10000;
+      creditBalance(payout, r.recipient);
+    });
 
     const updated = escrows.map(e => {
       if (e.id === escrowId) {
@@ -264,7 +547,45 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return { digest };
   };
 
-  // ── Refund Client — real PTB call ───────────────────────────────────────
+  // ── Cancel with 25% Penalty (During active work) ─────────────────────────
+  const cancelWithPenalty = async (escrowId: string) => {
+    const target = escrows.find(e => e.id === escrowId);
+    if (!target) throw new Error('Escrow order not found.');
+
+    const penalty = target.totalAmount * 0.25;
+    const clientRefund = target.totalAmount * 0.75;
+
+    // Refund 75% to Client, pay 25% penalty to Lead Freelancer
+    creditBalance(clientRefund, target.client);
+    creditBalance(penalty, target.leadFreelancer);
+
+    const digest = '6pCancelPenalty' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join('');
+
+    const updated = escrows.map(e => {
+      if (e.id === escrowId) {
+        return {
+          ...e,
+          status: STATUS_CODES.REFUNDED,
+          cancelledWithPenalty: true,
+          penaltyAmount: penalty,
+          txHistory: [
+            ...e.txHistory,
+            {
+              action: `Mid-Project Cancellation: $${clientRefund.toFixed(2)} refunded to Client, $${penalty.toFixed(2)} penalty compensated to Lead Freelancer`,
+              digest,
+              timestamp: new Date().toISOString(),
+              isReal: false,
+            },
+          ],
+        };
+      }
+      return e;
+    });
+    saveEscrows(updated);
+    return { digest };
+  };
+
+  // ── Refund Client ────────────────────────────────────────────────────────
   const refundClient = async (escrowId: string) => {
     const target = escrows.find(e => e.id === escrowId);
     if (!target) throw new Error('Escrow order not found.');
@@ -287,15 +608,18 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         throw new Error(err.message || 'Failed to refund on-chain');
       }
     } else {
-      digest = '4f' + Array.from({ length: 42 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
+      digest = '4fRefund' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join('');
     }
+
+    // 100% full refund back to client wallet
+    creditBalance(target.totalAmount, target.client);
 
     const updated = escrows.map(e => {
       if (e.id === escrowId) {
         return {
           ...e,
           status: STATUS_CODES.REFUNDED,
-          txHistory: [...e.txHistory, { action: 'Deposit Refunded to Client', digest, timestamp: new Date().toISOString(), isReal }],
+          txHistory: [...e.txHistory, { action: 'Full Escrow Deposit Refunded to Client', digest, timestamp: new Date().toISOString(), isReal }],
         };
       }
       return e;
@@ -304,7 +628,7 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return { digest };
   };
 
-  // ── Raise Dispute ───────────────────────────────────────────────────────
+  // ── Raise Dispute ────────────────────────────────────────────────────────
   const raiseDispute = async (escrowId: string) => {
     const target = escrows.find(e => e.id === escrowId);
     if (!target) throw new Error('Escrow order not found.');
@@ -327,7 +651,7 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         throw new Error(err.message || 'Failed to raise dispute on-chain');
       }
     } else {
-      digest = '1d' + Array.from({ length: 42 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
+      digest = '1dDispute' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join('');
     }
 
     const updated = escrows.map(e => {
@@ -337,7 +661,7 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           status: STATUS_CODES.DISPUTED,
           clientAgrees: false,
           freelancerAgrees: false,
-          txHistory: [...e.txHistory, { action: 'Dispute Raised', digest, timestamp: new Date().toISOString(), isReal }],
+          txHistory: [...e.txHistory, { action: 'Formal Dispute Raised on Escrow', digest, timestamp: new Date().toISOString(), isReal }],
         };
       }
       return e;
@@ -345,7 +669,7 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     saveEscrows(updated);
   };
 
-  // ── Agree to Release ────────────────────────────────────────────────────
+  // ── Agree to Release (Dispute Resolution) ────────────────────────────────
   const agreeToRelease = async (escrowId: string) => {
     const target = getEscrowById(escrowId);
     if (!target) throw new Error('Escrow not found.');
@@ -368,7 +692,7 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         throw new Error(err.message || 'Failed to agree to release on-chain');
       }
     } else {
-      digest = '3m' + Array.from({ length: 42 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
+      digest = '3mMutual' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join('');
     }
 
     const updated = escrows.map(e => {
@@ -385,7 +709,7 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           txHistory: [
             ...e.txHistory,
             {
-              action: `Mutual Agreement Logged by ${isClient ? 'Client' : 'Freelancer'}${bothAgree ? ' (Resolved)' : ''}`,
+              action: `Mutual Resolution Signed by ${isClient ? 'Client' : 'Freelancer'}${bothAgree ? ' (Dispute Resolved & Unlocked)' : ''}`,
               digest,
               timestamp: new Date().toISOString(),
               isReal,
@@ -398,8 +722,35 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     saveEscrows(updated);
   };
 
+  const resetEscrows = async () => {
+    setEscrows(INITIAL_ESCROWS);
+    localStorage.setItem('suipact_escrows_v3', JSON.stringify(INITIAL_ESCROWS));
+    try {
+      await fetch(`${SUI_CONFIG.relayerUrl}/api/reset-demo`, { method: 'POST' });
+    } catch (e) {}
+  };
+
   return (
-    <EscrowContext.Provider value={{ escrows, getEscrowById, createEscrow, submitDeliverable, approveAndRelease, refundClient, raiseDispute, agreeToRelease }}>
+    <EscrowContext.Provider
+      value={{
+        escrows,
+        getEscrowById,
+        createEscrow,
+        submitDeliverable,
+        approveAndRelease,
+        refundClient,
+        raiseDispute,
+        agreeToRelease,
+        acceptAgreement,
+        rejectAgreement,
+        negotiateAgreement,
+        clientApproveNegotiation,
+        rejectNegotiation,
+        requestRework,
+        cancelWithPenalty,
+        resetEscrows,
+      }}
+    >
       {children}
     </EscrowContext.Provider>
   );

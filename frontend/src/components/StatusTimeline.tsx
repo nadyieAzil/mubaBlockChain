@@ -1,7 +1,9 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { STATUS_CODES, getSuiScanTxUrl } from '@/config/sui';
 import { formatDate, formatAddress } from '@/lib/utils';
-import { Check, Clock, ExternalLink, AlertCircle, RotateCcw } from 'lucide-react';
+import { Check, Clock, ExternalLink, Lock, Eye, CheckCircle2, Shield } from 'lucide-react';
 
 interface TimelineProps {
   status: number;
@@ -13,22 +15,27 @@ interface TimelineProps {
 }
 
 export const StatusTimeline: React.FC<TimelineProps> = ({ status, txHistory }) => {
+  const [inspectedStep, setInspectedStep] = useState<number | null>(null);
+
   const steps = [
     {
+      stepNumber: 1,
       title: '1. Deposit Locked',
       desc: 'USDC deposited into shared Move escrow object',
       isCompleted: status >= STATUS_CODES.LOCKED,
       isActive: status === STATUS_CODES.LOCKED,
-      tx: txHistory.find((t) => t.action.includes('Created')),
+      tx: txHistory.find((t) => t.action.toLowerCase().includes('created') || t.action.toLowerCase().includes('deposit')),
     },
     {
+      stepNumber: 2,
       title: '2. Deliverable Submitted',
       desc: 'Lead freelancer attached proof-of-work link on-chain',
       isCompleted: status >= STATUS_CODES.DELIVERED && status !== STATUS_CODES.REFUNDED,
       isActive: status === STATUS_CODES.DELIVERED,
-      tx: txHistory.find((t) => t.action.includes('Submitted')),
+      tx: txHistory.find((t) => t.action.toLowerCase().includes('submitted') || t.action.toLowerCase().includes('deliverable')),
     },
     {
+      stepNumber: 3,
       title:
         status === STATUS_CODES.REFUNDED
           ? '3. Deposit Refunded'
@@ -45,31 +52,47 @@ export const StatusTimeline: React.FC<TimelineProps> = ({ status, txHistory }) =
       isActive: status === STATUS_CODES.RELEASED || status === STATUS_CODES.DISPUTED,
       tx: txHistory.find(
         (t) =>
-          t.action.includes('Released') ||
-          t.action.includes('Refunded') ||
-          t.action.includes('Dispute')
+          t.action.toLowerCase().includes('released') ||
+          t.action.toLowerCase().includes('refunded') ||
+          t.action.toLowerCase().includes('dispute')
       ),
     },
   ];
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
-      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-6 flex items-center justify-between">
-        <span>On-Chain Escrow Lifecycle</span>
-        <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-          Sui Testnet Verified
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Shield className="h-4 w-4 text-blue-600" />
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
+            Escrow Milestones &amp; Sui Progress
+          </h3>
+        </div>
+        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+          {status === STATUS_CODES.LOCKED ? 'Phase 1 Active (Execution)' : status === STATUS_CODES.DELIVERED ? 'Phase 2 Active (Review)' : 'Phase 3 (Settled)'}
         </span>
-      </h3>
+      </div>
 
       <div className="relative flex flex-col md:flex-row justify-between gap-6">
         {steps.map((step, idx) => {
+          const isClickable = step.isCompleted;
+          const isSelected = inspectedStep === idx;
+
           return (
-            <div key={idx} className="flex-1 relative flex md:flex-col items-start gap-4">
+            <div
+              key={idx}
+              onClick={() => isClickable && setInspectedStep(isSelected ? null : idx)}
+              className={`flex-1 relative flex md:flex-col items-start gap-3.5 p-3 rounded-xl transition-all ${
+                isClickable
+                  ? 'cursor-pointer hover:bg-slate-50'
+                  : 'opacity-70 cursor-not-allowed'
+              } ${isSelected ? 'bg-blue-50/80 border border-blue-200 ring-1 ring-blue-300' : ''}`}
+            >
               {/* Connector line for desktop */}
               {idx < steps.length - 1 && (
                 <div
-                  className={`hidden md:block absolute top-4 left-8 right-0 h-0.5 ${
-                    step.isCompleted ? 'bg-indigo-500' : 'bg-slate-200'
+                  className={`hidden md:block absolute top-7 left-10 right-0 h-0.5 ${
+                    step.isCompleted ? 'bg-blue-600' : 'bg-slate-200'
                   }`}
                   style={{ zIndex: 0 }}
                 />
@@ -77,12 +100,12 @@ export const StatusTimeline: React.FC<TimelineProps> = ({ status, txHistory }) =
 
               {/* Step Circle */}
               <div
-                className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
                   step.isCompleted
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                     : step.isActive
                     ? 'bg-amber-500 text-white ring-4 ring-amber-100'
-                    : 'border border-slate-300 bg-slate-100 text-slate-500'
+                    : 'border border-slate-300 bg-slate-100 text-slate-400'
                 }`}
               >
                 {step.isCompleted ? (
@@ -90,39 +113,69 @@ export const StatusTimeline: React.FC<TimelineProps> = ({ status, txHistory }) =
                 ) : step.isActive ? (
                   <Clock className="h-4 w-4 animate-spin" />
                 ) : (
-                  idx + 1
+                  <Lock className="h-3.5 w-3.5 text-slate-400" />
                 )}
               </div>
 
               {/* Step Content */}
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold text-slate-900">{step.title}</h4>
-                <p className="text-xs text-slate-500 mt-0.5">{step.desc}</p>
-
-                {/* Tx Digest Link */}
-                {step.tx ? (
-                  <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1 text-[11px] font-mono text-slate-600 border border-slate-200/70 hover:bg-slate-100 transition-colors">
-                    <span className="text-slate-400">Tx:</span>
-                    <a
-                      href={getSuiScanTxUrl(step.tx.digest)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-indigo-600 hover:underline flex items-center gap-1"
-                    >
-                      {formatAddress(step.tx.digest, 4)}
-                      <ExternalLink className="h-3 w-3 text-slate-400" />
-                    </a>
-                  </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-slate-900">{step.title}</h4>
+                  {step.isCompleted && (
+                    <span title="Click to inspect phase details"><Eye className="h-3 w-3 text-blue-500 shrink-0" /></span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{step.desc}</p>
+                {step.isCompleted ? (
+                  <span className="inline-block text-[9px] font-bold text-emerald-600 mt-1 uppercase">✓ Verified on Sui (Click to Inspect)</span>
+                ) : step.isActive ? (
+                  <span className="inline-block text-[9px] font-bold text-amber-600 mt-1 uppercase">⚡ Current Active Task</span>
                 ) : (
-                  <span className="mt-2 inline-block text-[11px] text-slate-400 italic">
-                    Pending step
-                  </span>
+                  <span className="inline-block text-[9px] font-bold text-slate-400 mt-1 uppercase">🔒 Locked (Next Phase)</span>
                 )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Phase Inspection Box */}
+      {inspectedStep !== null && steps[inspectedStep]?.isCompleted && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 space-y-2 animate-fade-in text-xs">
+          <div className="flex items-center justify-between">
+            <div className="font-extrabold text-blue-900 flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-blue-600" />
+              Phase Details: {steps[inspectedStep].title}
+            </div>
+            <button onClick={() => setInspectedStep(null)} className="text-[11px] text-slate-500 hover:text-slate-800">Close</button>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-2 text-[11px]">
+            <div>
+              <span className="text-slate-500">Action:</span>{' '}
+              <strong className="text-slate-800">{steps[inspectedStep].tx?.action || 'On-chain Event Recorded'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500">Timestamp:</span>{' '}
+              <strong className="text-slate-800">{steps[inspectedStep].tx?.timestamp ? formatDate(steps[inspectedStep].tx.timestamp) : 'N/A'}</strong>
+            </div>
+          </div>
+
+          {steps[inspectedStep].tx?.digest && (
+            <div className="flex items-center justify-between rounded-lg bg-white p-2 border border-blue-100 font-mono text-[10px]">
+              <span className="truncate text-slate-700 mr-2">Digest: {steps[inspectedStep].tx.digest}</span>
+              <a
+                href={getSuiScanTxUrl(steps[inspectedStep].tx.digest)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-blue-600 font-bold shrink-0 hover:underline"
+              >
+                Explorer <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

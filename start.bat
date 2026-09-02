@@ -10,6 +10,11 @@ echo [2/2] Starting Next.js Frontend on port 3000...
 start "SuiPact Frontend" cmd /k "cd frontend && npm run dev"
 
 echo.
+echo [3/3] Opening browser at http://localhost:3000 ...
+timeout /t 3 /nobreak >nul
+start http://localhost:3000
+
+echo.
 echo ========================================================
 echo SuiPact is launching!
 echo Frontend: http://localhost:3000

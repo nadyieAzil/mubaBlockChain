@@ -10,9 +10,11 @@ import { StatusTimeline } from '@/components/StatusTimeline';
 import { DisclaimerBanner } from '@/components/DisclaimerBanner';
 import { PTBFlowVisualizer } from '@/components/PTBFlowVisualizer';
 import { AIDeliverableAuditCard } from '@/components/AIDeliverableAuditCard';
+import { OfficialPactDocumentModal } from '@/components/OfficialPactDocumentModal';
+import { PDFDocumentViewerModal } from '@/components/PDFDocumentViewerModal';
 import { STATUS_CODES, getSuiScanTxUrl, getSuiScanObjectUrl } from '@/config/sui';
-
 import { formatUSDC, formatAddress, formatDate, sanitizeDeliverableUri } from '@/lib/utils';
+import { uploadDocument } from '@/lib/firebase';
 import {
   ArrowLeft,
   ExternalLink,
@@ -31,9 +33,17 @@ import {
   ShieldAlert,
   Hash,
   Fingerprint,
+  FileText,
+  MessageSquare,
+  Sparkles,
+  Bot,
+  Crown,
+  Eye,
+  X,
+  UploadCloud,
+  Paperclip,
 } from 'lucide-react';
 
-// ── SHA-256 fingerprint of a proof URI ──────────────────────────────────────
 async function sha256Fingerprint(text: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(text.trim());
@@ -47,7 +57,21 @@ export default function EscrowDetailPage() {
   const id = params?.id as string;
 
   const { user } = useAuth();
-  const { getEscrowById, submitDeliverable, approveAndRelease, refundClient, raiseDispute, agreeToRelease } = useEscrow();
+  const {
+    getEscrowById,
+    submitDeliverable,
+    approveAndRelease,
+    refundClient,
+    raiseDispute,
+    agreeToRelease,
+    acceptAgreement,
+    rejectAgreement,
+    negotiateAgreement,
+    clientApproveNegotiation,
+    rejectNegotiation,
+    requestRework,
+    cancelWithPenalty,
+  } = useEscrow();
 
   const escrow = getEscrowById(id);
 
@@ -59,41 +83,98 @@ export default function EscrowDetailPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showPTBVisualizer, setShowPTBVisualizer] = useState(false);
   const [pendingTxDigest, setPendingTxDigest] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<'refund' | 'dispute' | null>(null);
+
+  // Modals & Forms State
+  const [showAgreementModal, setShowAgreementModal] = useState(false);
+  const [showReleaseConfirmModal, setShowReleaseConfirmModal] = useState(false);
+  const [showReworkInput, setShowReworkInput] = useState(false);
+  const [reworkComment, setReworkComment] = useState('');
+  const [showPenaltyCancelModal, setShowPenaltyCancelModal] = useState(false);
+  const [deliverableDocName, setDeliverableDocName] = useState<string>('');
+  const [deliverableDocUrl, setDeliverableDocUrl] = useState<string>('');
+  const [isUploadingDeliverableDoc, setIsUploadingDeliverableDoc] = useState(false);
+  const [viewingPDF, setViewingPDF] = useState<{ url: string; name: string; title: string } | null>(null);
 
   const searchParams = useSearchParams();
   const isNew = searchParams?.get('new') === 'true';
 
   useEffect(() => {
     if (isNew && escrow) {
-      setSuccessMessage('🎉 Escrow created and deposit locked successfully!');
+      setSuccessMessage('🎉 Escrow created and full contract deposit locked successfully!');
       window.history.replaceState(null, '', `/escrow/${id}`);
     }
   }, [isNew, escrow, id]);
 
+  // Pre-fill deliverable URI and existing attachments if rework is requested
+  useEffect(() => {
+    if (escrow?.isRevisionRequested && escrow.deliveryProofUri && !proofInput) {
+      setProofInput(escrow.deliveryProofUri);
+    }
+    if (escrow?.deliverableAttachmentName && !deliverableDocName) {
+      setDeliverableDocName(escrow.deliverableAttachmentName);
+      setDeliverableDocUrl(escrow.deliverableAttachmentUrl || '');
+    }
+  }, [escrow?.isRevisionRequested, escrow?.deliveryProofUri, escrow?.deliverableAttachmentName]);
+
+  const handleDeliverableDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setErrorMessage('Please upload a PDF document (.pdf only).');
+      return;
+    }
+
+    setIsUploadingDeliverableDoc(true);
+    setErrorMessage(null);
+    try {
+      const res = await uploadDocument(file);
+      setDeliverableDocUrl(res.downloadUrl);
+      setDeliverableDocName(res.fileName);
+      setSuccessMessage(`Document "${file.name}" attached successfully.`);
+    } catch (err: any) {
+      setErrorMessage('Document upload failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsUploadingDeliverableDoc(false);
+    }
+  };
+
+  const userAddr = user?.address?.toLowerCase();
+  const isClient = !!userAddr && !!escrow?.client && userAddr === escrow.client.toLowerCase();
+  const isFreelancer = !!userAddr && !!escrow?.leadFreelancer && userAddr === escrow.leadFreelancer.toLowerCase();
+  const isRecipient = escrow?.recipients.some((r) => r.recipient?.toLowerCase() === userAddr);
+
+  // Auto-open agreement for Lead Freelancer if pending
+  useEffect(() => {
+    if (escrow && isFreelancer && escrow.agreementStatus === 'pending') {
+      setShowAgreementModal(true);
+    }
+  }, [isFreelancer, escrow?.agreementStatus]);
+
   if (!escrow) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center space-y-3">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-          <Lock className="h-7 w-7" />
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg border border-slate-200 space-y-4">
+          <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto" />
+          <h2 className="text-lg font-bold text-slate-900">Escrow Contract Not Found</h2>
+          <p className="text-xs text-slate-500">The escrow object with ID {formatAddress(id, 8)} does not exist or has expired.</p>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+          </Link>
         </div>
-        <h2 className="text-xl font-bold text-slate-900">Escrow Order Not Found</h2>
-        <p className="text-xs text-slate-500">The requested escrow object ID does not exist or has expired from local state.</p>
-        <Link href="/dashboard" className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">
-          <ArrowLeft className="h-4 w-4" /> Back to Orders
-        </Link>
       </div>
     );
   }
 
-  const userAddr = user?.address?.toLowerCase();
-  const isClient = !!userAddr && !!escrow.client && userAddr === escrow.client.toLowerCase();
-  const isFreelancer = !!userAddr && !!escrow.leadFreelancer && userAddr === escrow.leadFreelancer.toLowerCase();
-  const isRecipient = escrow.recipients.some((r) => r.recipient?.toLowerCase() === userAddr);
+  const copyId = () => {
+    navigator.clipboard.writeText(escrow.id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-  const copyId = () => { navigator.clipboard.writeText(escrow.id); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-
-  // Compute SHA-256 fingerprint as user types proof URI
   const handleProofChange = async (val: string) => {
     setProofInput(val);
     if (val.trim().length > 5) {
@@ -104,47 +185,69 @@ export default function EscrowDetailPage() {
     }
   };
 
+  // Submit Deliverable (Lead Freelancer Only)
   const handleDeliver = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFreelancer) {
-      setErrorMessage(`Security Warning: Only the Lead Freelancer (${escrow.freelancerName || escrow.leadFreelancer}) can submit proof.`);
-      return;
-    }
-    const { isValid, sanitizedUrl } = sanitizeDeliverableUri(proofInput);
+    if (!proofInput.trim()) return;
+
+    const { sanitizedUrl, isValid } = sanitizeDeliverableUri(proofInput);
     if (!isValid || !sanitizedUrl) {
-      setErrorMessage('Security Alert: Invalid deliverable URL. Only secure https://, http:// or ipfs:// URLs are permitted.');
+      setErrorMessage('Security Warning: Deliverable URI must be a valid https://, ipfs://, or ar:// URI.');
       return;
     }
+
     setLoadingAction('deliver');
     setErrorMessage(null);
     try {
-      await submitDeliverable(escrow.id, sanitizedUrl);
-      setSuccessMessage('✅ Proof of delivery submitted on Sui Testnet! SHA-256 fingerprint recorded as immutable commitment.');
+      await submitDeliverable(
+        escrow.id,
+        sanitizedUrl,
+        deliverableDocUrl || undefined,
+        deliverableDocName || undefined
+      );
+      setSuccessMessage(
+        escrow.isRevisionRequested
+          ? 'Revised deliverable and updated documents submitted successfully! Client notified for review.'
+          : 'Deliverable submitted successfully! Client has been notified for review.'
+      );
       setProofInput('');
       setProofFingerprint(null);
+      setDeliverableDocName('');
+      setDeliverableDocUrl('');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error submitting deliverable');
+      setErrorMessage(err.message || 'Failed to submit deliverable.');
     } finally {
       setLoadingAction(null);
     }
   };
 
-  const handleApprove = async () => {
-    if (!isClient) {
-      setErrorMessage(`Security Violation: Only the verified Client (${escrow.clientName || escrow.client}) can approve payout release.`);
-      return;
-    }
-    setLoadingAction('approve');
-    setErrorMessage(null);
-    // Show the PTB visualizer immediately
-    setShowPTBVisualizer(true);
+  // Rework Submission (Client Only)
+  const handleReworkSubmit = async () => {
+    if (!reworkComment.trim()) return;
+    setLoadingAction('rework');
     try {
-      const res = await approveAndRelease(escrow.id);
-      setPendingTxDigest(res.digest);
-      // Visualizer will call onComplete when animation finishes
+      await requestRework(escrow.id, reworkComment.trim());
+      setSuccessMessage('Revision requested. Lead Freelancer has been notified with your feedback.');
+      setReworkComment('');
+      setShowReworkInput(false);
     } catch (err: any) {
-      setShowPTBVisualizer(false);
-      setErrorMessage(err.message || 'Error releasing payout');
+      setErrorMessage(err.message || 'Failed to request rework.');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  // Release Execution (with PTB animation)
+  const executeRelease = async () => {
+    setShowReleaseConfirmModal(false);
+    setLoadingAction('release');
+    setErrorMessage(null);
+    try {
+      const { digest } = await approveAndRelease(escrow.id);
+      setPendingTxDigest(digest);
+      setShowPTBVisualizer(true);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to release payout.');
       setLoadingAction(null);
     }
   };
@@ -152,50 +255,57 @@ export default function EscrowDetailPage() {
   const handlePTBComplete = useCallback(() => {
     setShowPTBVisualizer(false);
     setLoadingAction(null);
-    setSuccessMessage(`🎉 Atomic split payout released to ${escrow.recipients.length} recipients in 1 PTB! $0 gas charged to users.${pendingTxDigest ? ` Tx: ${pendingTxDigest}` : ''}`);
-  }, [escrow.recipients.length, pendingTxDigest]);
+    setSuccessMessage(`Payment released atomically to all ${escrow.recipients.length} team members!`);
+  }, [escrow.recipients.length]);
 
-  const handleRefund = async () => {
-    if (!isClient) { setErrorMessage(`Security Violation: Only the Client can refund this escrow.`); return; }
-    if (confirmAction !== 'refund') { setConfirmAction('refund'); return; }
+  // Full Refund Client
+  const handleFullRefund = async () => {
     setLoadingAction('refund');
-    setConfirmAction(null);
     setErrorMessage(null);
     try {
-      const res = await refundClient(escrow.id);
-      setSuccessMessage(`Deposit refunded to client wallet. Tx: ${res.digest}`);
+      await refundClient(escrow.id);
+      setSuccessMessage('100% Escrow deposit refunded back to your wallet.');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error refunding client');
+      setErrorMessage(err.message || 'Failed to refund escrow.');
     } finally {
       setLoadingAction(null);
     }
   };
 
-  const handleDispute = async () => {
-    if (!isClient && !isFreelancer) { setErrorMessage('Security Violation: Only contract parties can raise disputes.'); return; }
-    if (confirmAction !== 'dispute') { setConfirmAction('dispute'); return; }
+  // Cancel with 25% Penalty
+  const handlePenaltyCancel = async () => {
+    setShowPenaltyCancelModal(false);
+    setLoadingAction('cancel_penalty');
+    try {
+      await cancelWithPenalty(escrow.id);
+      setSuccessMessage(`Project cancelled mid-way. 75% refunded to Client, 25% penalty compensated to Lead Freelancer.`);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to cancel with penalty.');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  // Dispute & Mutual Resolution
+  const handleRaiseDispute = async () => {
     setLoadingAction('dispute');
-    setConfirmAction(null);
-    setErrorMessage(null);
     try {
       await raiseDispute(escrow.id);
-      setSuccessMessage('Dispute raised. Mutual consent required to resolve.');
+      setSuccessMessage('Formal dispute raised. Escrow funds locked pending AI-assisted mutual resolution.');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error raising dispute');
+      setErrorMessage(err.message || 'Failed to raise dispute.');
     } finally {
       setLoadingAction(null);
     }
   };
 
-  const handleAgree = async () => {
-    if (!isClient && !isFreelancer) { setErrorMessage('Security Violation: Only contract parties can register mutual agreement.'); return; }
+  const handleAgreeResolution = async () => {
     setLoadingAction('agree');
-    setErrorMessage(null);
     try {
       await agreeToRelease(escrow.id);
-      setSuccessMessage('Mutual agreement registered on-chain.');
+      setSuccessMessage('Your resolution agreement has been signed on Sui.');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error registering agreement');
+      setErrorMessage(err.message || 'Failed to sign resolution.');
     } finally {
       setLoadingAction(null);
     }
@@ -203,7 +313,7 @@ export default function EscrowDetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* PTB Animated Flow Overlay */}
+      {/* PTB Flow Visualizer */}
       {showPTBVisualizer && (
         <PTBFlowVisualizer
           totalAmount={escrow.totalAmount}
@@ -217,25 +327,22 @@ export default function EscrowDetailPage() {
       )}
 
       {/* Blue Header Bar */}
-      <div className="bg-blue-gradient px-4 sm:px-6 lg:px-8 py-5">
-        <div className="mx-auto max-w-5xl">
-          <div className="flex items-center justify-between">
-            <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-100 hover:text-white transition-colors">
-              <ArrowLeft className="h-3.5 w-3.5" /> Back to My Orders
-            </Link>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-bold text-white">{user?.name || 'Guest'}</span>
-              <span className="text-[10px] font-extrabold text-yellow-300 uppercase bg-yellow-400/20 px-1.5 rounded">
-                {isClient ? 'CLIENT' : isFreelancer ? 'FREELANCER' : isRecipient ? 'RECIPIENT' : 'OBSERVER'}
-              </span>
-              <Link href="/login" className="text-[10px] text-blue-200 hover:text-white font-semibold">Switch</Link>
-            </div>
+      <div className="print:hidden bg-blue-gradient px-4 sm:px-6 lg:px-8 py-5 shadow-sm">
+        <div className="mx-auto max-w-5xl flex items-center justify-between">
+          <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-100 hover:text-white transition-colors">
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to My Orders
+          </Link>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs font-bold text-white">{user?.name || 'Guest'}</span>
+            <span className="text-[10px] font-extrabold text-yellow-300 uppercase bg-yellow-400/20 px-1.5 py-0.5 rounded">
+              {isClient ? '💼 CLIENT' : isFreelancer ? '👑 LEAD FREELANCER' : isRecipient ? '🎨 TEAM RECIPIENT' : 'OBSERVER'}
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+      <div className="print:hidden mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-6 space-y-5">
         <DisclaimerBanner />
 
         {/* Alerts */}
@@ -252,188 +359,714 @@ export default function EscrowDetailPage() {
           </div>
         )}
 
-        {/* Main Card */}
+        {/* Main Escrow Order Card */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          {/* Title Row */}
+          
+          {/* Header & Order Value */}
           <div className="p-6 sm:p-8 border-b border-slate-100">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
               <div className="space-y-2 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{escrow.title}</h1>
                   <StatusBadge status={escrow.status} />
+                  
+                  {/* Agreement Status Badge */}
+                  <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                    escrow.agreementStatus === 'accepted'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : escrow.agreementStatus === 'negotiating'
+                      ? 'bg-amber-50 border-amber-200 text-amber-700'
+                      : escrow.agreementStatus === 'rejected'
+                      ? 'bg-rose-50 border-rose-200 text-rose-700'
+                      : 'bg-blue-50 border-blue-200 text-blue-700'
+                  }`}>
+                    Pact Agreement: {escrow.agreementStatus}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
+
+                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-mono">
                   <span>Object: {formatAddress(escrow.id, 8)}</span>
-                  <button onClick={copyId} className="rounded p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors" title="Copy Object ID">
+                  <button onClick={copyId} className="rounded p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-600" title="Copy Object ID">
                     {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                   </button>
                   <a href={getSuiScanObjectUrl(escrow.id)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1 font-sans font-bold">
-                    Explorer <ExternalLink className="h-3 w-3" />
+                    SuiScan <ExternalLink className="h-3 w-3" />
                   </a>
+
+                  {/* Official Pact Agreement Button */}
+                  <button
+                    onClick={() => setShowAgreementModal(true)}
+                    className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-all font-sans"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-blue-400" />
+                    <span>View Official Agreement & A4 PDF</span>
+                  </button>
                 </div>
               </div>
+
               <div className="text-left md:text-right shrink-0">
-                <div className="text-[10px] font-bold text-slate-400 uppercase">Locked Escrow</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase">Total Escrow Value</div>
                 <div className="text-3xl font-extrabold text-slate-900">{formatUSDC(escrow.totalAmount)}</div>
-                <div className="text-[11px] font-bold text-blue-600">Testnet USDC</div>
+                <div className="text-[11px] font-bold text-emerald-600">$0.00 Gas Sponsored</div>
               </div>
             </div>
           </div>
 
           <div className="p-6 sm:p-8 space-y-6">
-            {/* Parties */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              {[
-                { label: 'Client / Buyer', sub: 'Authorized Approver', name: escrow.clientName, addr: escrow.client, isYou: isClient, youLabel: '✓ You (Owner)' },
-                { label: 'Lead Freelancer', sub: 'Authorized Deliverer', name: escrow.freelancerName, addr: escrow.leadFreelancer, isYou: isFreelancer, youLabel: '✓ You (Seller)' },
-              ].map((p, i) => (
-                <div key={i} className={`rounded-xl border p-4 transition-all ${p.isYou ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-400 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-extrabold uppercase text-slate-400">{p.label} — {p.sub}</span>
-                    {p.isYou && <span className="text-[9px] font-extrabold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">{p.youLabel}</span>}
+            
+            {/* Project Scope Description & Document Attachment */}
+            {escrow.scopeDescription && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
+                <div className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Project Requirements & Scope</div>
+                <p className="text-xs text-slate-600 leading-relaxed">{escrow.scopeDescription}</p>
+                {escrow.attachedDocumentName && (
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-700">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      <span>Reference Document: {escrow.attachedDocumentName}</span>
+                    </div>
+                    {escrow.attachedDocumentUrl && (
+                      <a
+                        href={escrow.attachedDocumentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 font-bold hover:underline flex items-center gap-1"
+                      >
+                        Open Document <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
                   </div>
-                  <div className="text-sm font-extrabold text-slate-900">{p.name || 'Unknown'}</div>
-                  <div className="font-mono text-[11px] text-slate-400 mt-0.5 truncate">{p.addr}</div>
+                )}
+              </div>
+            )}
+
+            {/* Negotiation Note Banner (If in negotiation) */}
+            {escrow.agreementStatus === 'negotiating' && escrow.negotiationNotes && (
+              <div className="rounded-xl border-2 border-amber-300 bg-amber-50/90 p-4 space-y-3 animate-fade-in text-xs shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="font-extrabold text-amber-900 flex items-center gap-1.5 text-sm">
+                    <MessageSquare className="h-4 w-4 text-amber-700" />
+                    Lead Freelancer Proposed Terms &amp; Split Adjustment
+                  </div>
+                  <span className="text-[10px] bg-amber-200 text-amber-900 font-extrabold uppercase px-2 py-0.5 rounded-full">
+                    Awaiting Client Approval
+                  </span>
                 </div>
-              ))}
+
+                <div className="rounded-lg bg-white/80 border border-amber-200 p-3 space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-500">Reason / Notes:</span>
+                  <p className="text-slate-800 italic text-xs">"{escrow.negotiationNotes}"</p>
+                </div>
+
+                {/* Proposed New Split Allocation Schedule */}
+                <div className="rounded-xl bg-white border border-amber-200 p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-slate-800 text-[11px] uppercase tracking-wider">
+                      Proposed Contract Value:
+                    </span>
+                    <span className="text-sm font-extrabold text-emerald-700">
+                      ${escrow.totalAmount.toFixed(2)} USDC
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-slate-100">
+                    {escrow.recipients.map((r, i) => {
+                      const pct = ((r.percentageBasisPoints || 0) / 100).toFixed(1);
+                      const payout = (escrow.totalAmount * (r.percentageBasisPoints || 0)) / 10000;
+                      return (
+                        <div key={i} className="py-1.5 flex items-center justify-between text-xs font-mono">
+                          <span className="font-bold text-slate-700 font-sans flex items-center gap-1">
+                            {r.name || `Member ${i + 1}`}
+                            {r.recipient.toLowerCase() === escrow.leadFreelancer.toLowerCase() && (
+                              <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1 rounded font-sans">Lead</span>
+                            )}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold text-blue-700">{pct}%</span>
+                            <span className="font-extrabold text-emerald-700">${payout.toFixed(2)} USDC</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-1 flex flex-wrap items-center gap-2">
+                  {isClient && (
+                    <>
+                      <button
+                        onClick={async () => {
+                          await clientApproveNegotiation(escrow.id);
+                          setSuccessMessage('Adjusted rate approved! Waiting for Lead Freelancer final acceptance.');
+                        }}
+                        className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>✓ Approve Adjusted Rate (${escrow.totalAmount} USDC)</span>
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          await rejectNegotiation(escrow.id);
+                          setSuccessMessage('Counter-offer declined. Original contract terms and budget restored.');
+                        }}
+                        className="rounded-xl bg-white border border-rose-300 hover:bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 shadow-sm transition-all flex items-center gap-1.5"
+                      >
+                        <X className="h-4 w-4" />
+                        <span>✕ Decline Counter-Offer (Revert to Original)</span>
+                      </button>
+                    </>
+                  )}
+
+                  {isFreelancer && (
+                    <button
+                      onClick={() => setShowAgreementModal(true)}
+                      className="rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-all flex items-center gap-1.5"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>📄 View / Modify Agreement Terms</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Pending Agreement Review Banner */}
+            {escrow.agreementStatus === 'pending' && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50/80 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fade-in shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <div>
+                    <span className="font-extrabold text-amber-950">
+                      {isFreelancer ? 'Agreement Review Required' : 'Awaiting Freelancer Agreement Review'}
+                    </span>
+                    <p className="text-[11px] text-amber-800">
+                      Baseline contract terms locked at <strong>{formatUSDC(escrow.totalAmount)} USDC</strong>. Freelancer can accept, negotiate, or decline.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAgreementModal(true)}
+                  className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold px-3.5 py-1.5 text-xs shrink-0 flex items-center gap-1.5 transition-all"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>{isFreelancer ? '📄 Review / Modify Agreement' : 'View Agreement Document'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Client Approved Negotiation Banner */}
+            {escrow.agreementStatus === 'client_approved' && (
+              <div className="rounded-xl border border-emerald-300 bg-emerald-50/90 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fade-in shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="font-extrabold text-emerald-950 text-sm">
+                      {isFreelancer ? '🎉 Client Approved Your Adjusted Terms!' : '✓ You Approved Adjusted Counter-Offer'}
+                    </span>
+                    <p className="text-[11px] text-emerald-800 mt-0.5">
+                      {isFreelancer
+                        ? `Client accepted rate of ${formatUSDC(escrow.totalAmount)} USDC. Please review and click Accept to formally begin work (or you may still modify or decline).`
+                        : `Adjusted budget set to ${formatUSDC(escrow.totalAmount)} USDC. Waiting for Lead Freelancer final acceptance to begin work.`}
+                    </p>
+                  </div>
+                </div>
+                {isFreelancer && (
+                  <button
+                    onClick={() => setShowAgreementModal(true)}
+                    className="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 text-xs shrink-0 flex items-center gap-1.5 shadow-sm transition-all"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span>📄 Review &amp; Accept / Modify</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Finalized & Signed Agreement Banner */}
+            {escrow.agreementStatus === 'accepted' && (
+              <div className="rounded-xl border border-emerald-300 bg-emerald-50/80 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fade-in shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="font-extrabold text-emerald-950">Official Agreement Finalized &amp; Signed</span>
+                    <p className="text-[11px] text-emerald-800">
+                      Contract locked at <strong>{formatUSDC(escrow.totalAmount)} USDC</strong> with verified split distribution on Sui zkLogin.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAgreementModal(true)}
+                  className="rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3.5 py-1.5 text-xs shrink-0 flex items-center gap-1.5 transition-all"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>📄 View Signed Agreement (A4 PDF)</span>
+                </button>
+              </div>
+            )}
+
+            {/* Contract Parties */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className={`rounded-xl border p-4 ${isClient ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-400' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-400">Client / Buyer</span>
+                  {isClient && <span className="text-[9px] font-extrabold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">✓ You</span>}
+                </div>
+                <div className="text-sm font-extrabold text-slate-900">{escrow.clientName || 'Authorized Client'}</div>
+                <div className="font-mono text-[11px] text-slate-500 truncate mt-0.5">{escrow.client}</div>
+              </div>
+
+              <div className={`rounded-xl border p-4 ${isFreelancer ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-400' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-400 flex items-center gap-1">
+                    <Crown className="h-3 w-3 text-amber-500" /> Lead Freelancer
+                  </span>
+                  {isFreelancer && <span className="text-[9px] font-extrabold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">✓ You</span>}
+                </div>
+                <div className="text-sm font-extrabold text-slate-900">{escrow.freelancerName || 'Bob Vance'}</div>
+                <div className="font-mono text-[11px] text-slate-500 truncate mt-0.5">{escrow.leadFreelancer}</div>
+              </div>
             </div>
 
-            {/* Status Timeline */}
+            {/* Interactive On-Chain Lifecycle Timeline */}
             <StatusTimeline status={escrow.status} txHistory={escrow.txHistory} />
 
-            {/* Deliverable Proof Section */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileCheck className="h-4 w-4 text-blue-600" />
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">On-Chain Proof of Delivery</h4>
+            {/* Explicit Phase Action Guide Banner */}
+            <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-extrabold text-xs shrink-0">
+                  {escrow.status === STATUS_CODES.LOCKED ? '1' : escrow.status === STATUS_CODES.DELIVERED ? '2' : '3'}
                 </div>
-                <span className="text-[10px] text-slate-500 font-medium">Immutable URI bound to Move object</span>
+                <div>
+                  <div className="font-extrabold text-blue-950">
+                    {escrow.status === STATUS_CODES.LOCKED
+                      ? 'Phase 1 Active: Deposit Locked & Work In Progress'
+                      : escrow.status === STATUS_CODES.DELIVERED
+                      ? 'Phase 2 Active: Work Submitted & Under Client Review'
+                      : escrow.status === STATUS_CODES.DISPUTED
+                      ? 'Phase Alert: Formal Dispute In Progress'
+                      : 'Phase 3 Complete: Payment Atomically Released'}
+                  </div>
+                  <p className="text-[11px] text-blue-800">
+                    {escrow.status === STATUS_CODES.LOCKED
+                      ? isFreelancer
+                        ? '👉 Action to complete Phase 1: Submit your deliverable link in the form below.'
+                        : '⏳ Waiting for Lead Freelancer to complete work and submit proof.'
+                      : escrow.status === STATUS_CODES.DELIVERED
+                      ? isClient
+                        ? '👉 Action to complete Phase 2: Click "Approve & Release Funds" below to disburse payment.'
+                        : '⏳ Waiting for Client to review deliverables and release payment.'
+                      : escrow.status === STATUS_CODES.DISPUTED
+                      ? 'Both parties must sign agreement or accept AI recommendation to resolve.'
+                      : 'All recipient wallets have been credited on Sui Testnet.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Deliverable Proof & Review Section ── */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">Deliverable Proof &amp; Inspection</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Live proof submitted by the Lead Freelancer on the Sui network.
+                  </p>
+                </div>
+                <span className="text-[10px] text-slate-500">Only Lead Freelancer Can Submit Proof</span>
               </div>
 
               {escrow.deliveryProofUri ? (
                 <div className="space-y-3">
-                  <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs space-y-2">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="font-mono text-xs text-blue-700 font-bold truncate flex-1">{escrow.deliveryProofUri}</div>
                       <a
                         href={sanitizeDeliverableUri(escrow.deliveryProofUri).sanitizedUrl || '#'}
-                        target="_blank" rel="noopener noreferrer"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="flex items-center gap-1.5 shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-colors"
                       >
-                        Inspect Deliverable <ExternalLink className="h-3 w-3" />
+                        Open In New Tab <ExternalLink className="h-3 w-3" />
                       </a>
                     </div>
+
+                    {/* In-App Preview / Inspection (Item 12) */}
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs flex items-center justify-between">
+                      <span className="text-slate-600 font-semibold">🔍 Deliverable Inspection Available</span>
+                      <a
+                        href={sanitizeDeliverableUri(escrow.deliveryProofUri).sanitizedUrl || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 font-bold hover:underline flex items-center gap-1"
+                      >
+                        <Eye className="h-3.5 w-3.5" /> Direct Inspection Link
+                      </a>
+                    </div>
+
+                    {/* Attached Supporting PDF / Document */}
+                    {escrow.deliverableAttachmentUrl && (
+                      <div className="rounded-lg border border-blue-200 bg-blue-50/80 p-3 text-xs flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-slate-800 font-semibold">
+                          <FileText className="h-4 w-4 text-blue-600 shrink-0" />
+                          <span>Supporting Document: <strong>{escrow.deliverableAttachmentName || 'Deliverable Report.pdf'}</strong></span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setViewingPDF({
+                              url: escrow.deliverableAttachmentUrl!,
+                              name: escrow.deliverableAttachmentName || 'Deliverable Report.pdf',
+                              title: 'Deliverable Supporting Document / Report',
+                            })
+                          }
+                          className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-1.5 text-[11px] flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          <span>View &amp; Print PDF</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {/* SHA-256 Fingerprint of submitted URI */}
-                  <ProofFingerprint uri={escrow.deliveryProofUri} />
 
                   {/* AI Deliverable Quality Audit Card */}
                   <AIDeliverableAuditCard
                     escrowTitle={escrow.title}
-                    scopeDescription={escrow.title}
+                    scopeDescription={escrow.scopeDescription || escrow.title}
                     deliverableUrl={escrow.deliveryProofUri}
                   />
+
+                  {/* Previous Revision Comments History */}
+                  {escrow.reworkComments && escrow.reworkComments.length > 0 && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-2">
+                      <div className="text-xs font-bold text-amber-900 uppercase">Revision History &amp; Client Feedback</div>
+                      {escrow.reworkComments.map((note, idx) => (
+                        <div key={idx} className="rounded-lg bg-white p-2.5 border border-amber-200 text-xs space-y-0.5">
+                          <div className="flex justify-between text-[10px] text-slate-500">
+                            <strong>{note.author}</strong>
+                            <span>{formatDate(note.timestamp)}</span>
+                          </div>
+                          <p className="text-slate-800">{note.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-xs text-slate-500 italic leading-relaxed">
-                  No deliverable proof submitted yet. The lead freelancer will attach their GitHub PR, Figma URL, or IPFS CID when work is complete.
+                  No deliverable submitted yet. The Lead Freelancer will submit proof of completion (Figma link, GitHub PR, Google Drive URL, or PDF report).
                 </div>
               )}
 
-              {/* Submission Form */}
-              {escrow.status === STATUS_CODES.LOCKED && (
+              {/* Submit / Resubmit Deliverable Form (LOCKED or Revision Requested) */}
+              {(escrow.status === STATUS_CODES.LOCKED || escrow.isRevisionRequested) && (
                 <div className="pt-3 border-t border-slate-200 space-y-3">
                   {isFreelancer ? (
-                    <form onSubmit={handleDeliver} className="space-y-3">
-                      <label className="block text-xs font-extrabold text-slate-800">
-                        Submit Deliverable Proof URI
-                        <span className="text-slate-400 font-normal ml-1">(GitHub PR / Figma / IPFS link)</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          required
-                          placeholder="https://github.com/org/repo/pull/123"
-                          value={proofInput}
-                          onChange={(e) => handleProofChange(e.target.value)}
-                          className="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-mono text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                        />
-                        <button
-                          type="submit"
-                          disabled={loadingAction === 'deliver'}
-                          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 transition-all"
-                        >
-                          {loadingAction === 'deliver' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                          Submit ($0 Gas)
-                        </button>
+                    escrow.agreementStatus !== 'accepted' ? (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-xs space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                          <Lock className="h-4 w-4 text-amber-700" />
+                          <span>Deliverable Submission Locked</span>
+                        </div>
+                        <p className="text-amber-800 text-[11px]">
+                          {escrow.agreementStatus === 'negotiating'
+                            ? 'Your counter-offer proposal is currently pending Client decision. Deliverable submission will unlock once terms are accepted.'
+                            : 'You must review and accept the official agreement terms above before you can submit deliverables.'}
+                        </p>
                       </div>
+                    ) : (
+                      <form onSubmit={handleDeliver} className="space-y-3">
+                        {/* Rework Notice for Freelancer */}
+                        {escrow.isRevisionRequested && (
+                          <div className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 space-y-2 text-xs">
+                            <div className="flex items-center gap-2 text-amber-900 font-extrabold">
+                              <RotateCcw className="h-4 w-4 text-amber-700 animate-spin-slow" />
+                              <span>Action Required: Client Requested Rework / Revision</span>
+                            </div>
+                            <p className="text-[11px] text-amber-800 leading-relaxed">
+                              Please review client comments above, update your proof URL or attach revised documents below, then click <strong>Submit Revised Deliverable</strong>.
+                            </p>
+                          </div>
+                        )}
 
-                      {/* Live SHA-256 fingerprint preview */}
-                      {proofFingerprint && (
-                        <div className="rounded-xl bg-blue-50 border border-blue-100 p-3 space-y-1.5 animate-fade-in">
-                          <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-blue-700 uppercase">
-                            <Fingerprint className="h-3.5 w-3.5" /> SHA-256 Fingerprint (Immutable On-Chain Commitment)
+                        <label className="block text-xs font-extrabold text-slate-800">
+                          {escrow.isRevisionRequested ? 'Update Deliverable Proof URI' : 'Submit Proof of Work URI'}
+                        </label>
+                        
+                        {/* Helper type chips for freelance work */}
+                        <div className="flex flex-wrap gap-1.5 text-[10px]">
+                          <span className="text-slate-400 font-bold self-center mr-1">Formats:</span>
+                          {['https://figma.com/file/...', 'https://drive.google.com/...', 'https://github.com/org/repo/pull/1', 'https://canva.com/design/...'].map((format, idx) => (
+                            <button
+                              type="button"
+                              key={idx}
+                              onClick={() => setProofInput(format)}
+                              className="rounded-lg bg-white border border-slate-200 px-2 py-0.5 text-slate-600 hover:border-blue-400 hover:text-blue-600"
+                            >
+                              {format.split('/')[2]}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            required
+                            placeholder="Paste Google Drive, Figma, GitHub PR, or PDF link..."
+                            value={proofInput}
+                            onChange={(e) => handleProofChange(e.target.value)}
+                            className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none font-mono"
+                          />
+                          <button
+                            type="submit"
+                            disabled={loadingAction === 'deliver' || !proofInput.trim() || isUploadingDeliverableDoc}
+                            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 shadow-sm transition-all"
+                          >
+                            {loadingAction === 'deliver' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                            <span>{escrow.isRevisionRequested ? 'Submit Revised Deliverable' : 'Submit Proof'}</span>
+                          </button>
+                        </div>
+
+                        {/* Supporting PDF Document Attachment Input */}
+                        <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                              <Paperclip className="h-3.5 w-3.5 text-blue-600" />
+                              <span>Attach Supporting Document (PDF / Report / Asset Deliverables)</span>
+                            </label>
+                            <span className="text-[10px] text-slate-400 font-semibold">Optional</span>
                           </div>
-                          <div className="font-mono text-[10px] text-slate-700 break-all leading-relaxed bg-white rounded-lg px-2 py-1.5 border border-blue-100">
-                            {proofFingerprint}
-                          </div>
-                          <div className="text-[10px] text-blue-600 font-medium">
-                            This hash will be recorded on Sui as proof that this exact URI was submitted at this moment.
+
+                          <div className="flex flex-wrap items-center gap-3">
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition-colors">
+                              <UploadCloud className="h-4 w-4 text-blue-600" />
+                              <span>{isUploadingDeliverableDoc ? 'Uploading...' : 'Browse PDF File'}</span>
+                              <input
+                                type="file"
+                                accept=".pdf"
+                                onChange={handleDeliverableDocUpload}
+                                className="hidden"
+                                disabled={isUploadingDeliverableDoc}
+                              />
+                            </label>
+
+                            {deliverableDocName ? (
+                              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                                <FileText className="h-3.5 w-3.5" />
+                                <span className="truncate max-w-[200px]">{deliverableDocName}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => { setDeliverableDocName(''); setDeliverableDocUrl(''); }}
+                                  className="text-rose-600 hover:text-rose-800 font-bold ml-1 text-sm leading-none"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ) : escrow.deliverableAttachmentName ? (
+                              <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg">
+                                <FileText className="h-3.5 w-3.5 text-slate-400" />
+                                <span className="truncate max-w-[200px]">Current: {escrow.deliverableAttachmentName}</span>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
-                      )}
-                    </form>
-                  ) : (
-                    <div className="rounded-xl bg-white border border-slate-200 p-3 text-xs text-slate-500 flex items-center gap-2">
-                      <Lock className="h-4 w-4 text-slate-400 shrink-0" />
-                      Submission restricted to Lead Freelancer ({escrow.freelancerName || formatAddress(escrow.leadFreelancer, 6)}).
+                      </form>
+                    )
+                  ) : isClient ? (
+                    <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 text-xs text-blue-800">
+                      ℹ️ <strong>Client POV:</strong> {escrow.isRevisionRequested ? 'You requested revisions. Waiting for Lead Freelancer to submit updated deliverables.' : 'Funds locked in Sui contract. Waiting for Lead Freelancer to submit deliverables.'}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>
 
-            {/* Multi-Recipient Split Table */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-blue-600" />
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
-                    Atomic Split Payout ({escrow.recipients.length} Recipient{escrow.recipients.length > 1 ? 's' : ''})
-                  </h4>
-                </div>
-                <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                  Single PTB · 1 Transaction
-                </span>
-              </div>
+            {/* ── Client Approval, Rework & Dispute Actions ── */}
+            {escrow.status === STATUS_CODES.DELIVERED && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">Review & Payment Settlement</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Verify the proof above. You can release payment, request revisions, or raise a dispute if in deadlock.
+                    </p>
+                  </div>
 
+                  {isClient && (
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {/* Request Revision Button */}
+                      <button
+                        onClick={() => setShowReworkInput(!showReworkInput)}
+                        className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 px-4 py-2.5 text-xs font-bold text-amber-900 transition-all"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        <span>Request Rework</span>
+                      </button>
+
+                      {/* Raise Dispute Button */}
+                      <button
+                        onClick={handleRaiseDispute}
+                        disabled={loadingAction === 'dispute'}
+                        className="flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 px-3.5 py-2.5 text-xs font-bold text-rose-700 transition-all"
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        <span>Raise Dispute</span>
+                      </button>
+
+                      {/* Approve & Release Button (Triggers Confirmation Modal) */}
+                      <button
+                        onClick={() => setShowReleaseConfirmModal(true)}
+                        className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-6 py-2.5 text-xs font-extrabold text-white shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Approve & Release Funds</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Revision Input Drawer */}
+                {showReworkInput && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-3 animate-fade-in">
+                    <label className="block text-xs font-bold text-amber-900">
+                      Revision Instructions & Feedback:
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      placeholder="Explain what parts require adjustment or improvement..."
+                      value={reworkComment}
+                      onChange={(e) => setReworkComment(e.target.value)}
+                      className="w-full rounded-xl border border-amber-300 bg-white p-3 text-xs text-slate-900 focus:outline-none"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setShowReworkInput(false)}
+                        className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-amber-100 rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleReworkSubmit}
+                        disabled={loadingAction === 'rework' || !reworkComment.trim()}
+                        className="rounded-xl bg-amber-700 hover:bg-amber-800 px-4 py-1.5 text-xs font-bold text-white shadow-xs"
+                      >
+                        {loadingAction === 'rework' ? 'Submitting...' : 'Send Revision Feedback'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Cancellation Options in LOCKED Phase ── */}
+            {escrow.status === STATUS_CODES.LOCKED && isClient && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div>
+                  <span className="font-bold text-slate-800">Need to cancel this project?</span>
+                  <p className="text-[11px] text-slate-500">
+                    {escrow.agreementStatus === 'accepted'
+                      ? 'Work is currently in progress. Cancelling now incurs a 25% penalty to compensate the freelancer team.'
+                      : 'Freelancer has not yet accepted terms. You can cancel now for a 100% full refund with no penalty.'}
+                  </p>
+                </div>
+
+                {escrow.agreementStatus === 'accepted' ? (
+                  <button
+                    onClick={() => setShowPenaltyCancelModal(true)}
+                    className="rounded-xl border border-rose-300 bg-white hover:bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 shadow-xs transition-colors"
+                  >
+                    Early Termination (25% Penalty)
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleFullRefund}
+                    disabled={loadingAction === 'refund'}
+                    className="rounded-xl border border-slate-300 bg-white hover:bg-slate-100 px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs transition-colors"
+                  >
+                    {loadingAction === 'refund' ? 'Refunding...' : 'Cancel & 100% Full Refund'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* ── Hybrid AI Dispute Resolution View ── */}
+            {escrow.status === STATUS_CODES.DISPUTED && (
+              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/50 p-6 space-y-4 shadow-sm">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-amber-600 text-white flex items-center justify-center">
+                    <Bot className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">SuiPact AI Dispute Mediator</h3>
+                    <p className="text-xs text-amber-800">Unbiased analysis of contract specifications vs delivered artifact</p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-200 bg-white p-4 space-y-2 text-xs">
+                  <div className="font-bold text-slate-900 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-purple-600" />
+                    AI Recommended Settlement Verdict:
+                  </div>
+                  <p className="text-slate-600 leading-relaxed">
+                    Based on deliverable artifacts and scope criteria, the project has achieved approximately <strong>75% completion</strong>. Recommended fair compromise: <strong>75% payout to Lead Freelancer team</strong> and <strong>25% refund to Client</strong>.
+                  </p>
+                </div>
+
+                {/* Dual Resolution Actions */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                  <div className="text-xs text-slate-600">
+                    Dual signatures required to unlock. Status: Client: {escrow.clientAgrees ? '✓ Agreed' : '⏳ Pending'} | Freelancer: {escrow.freelancerAgrees ? '✓ Agreed' : '⏳ Pending'}
+                  </div>
+
+                  {(isClient || isFreelancer) && (
+                    <button
+                      onClick={handleAgreeResolution}
+                      disabled={loadingAction === 'agree'}
+                      className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Accept AI Settlement & Unlock Escrow</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Team Split Table */}
+            <div className="space-y-3 pt-2">
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600" />
+                Atomic Team Split Allocation
+              </h4>
               <div className="overflow-x-auto rounded-xl border border-slate-200">
                 <table className="w-full text-left text-xs">
-                  <thead className="border-b border-slate-200 bg-slate-50 text-slate-500 font-bold uppercase">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
                     <tr>
-                      <th className="py-2.5 px-4">Recipient</th>
-                      <th className="py-2.5 px-4">Sui Address</th>
-                      <th className="py-2.5 px-4 text-right">Share</th>
-                      <th className="py-2.5 px-4 text-right">Payout</th>
+                      <th className="p-3">Recipient</th>
+                      <th className="p-3">Sui Address</th>
+                      <th className="p-3 text-center">Split %</th>
+                      <th className="p-3 text-right">Payout (USDC)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-800 font-medium">
-                    {escrow.recipients.map((r, idx) => {
-                      const pct = (r.percentageBasisPoints / 100).toFixed(2);
-                      const amount = (escrow.totalAmount * r.percentageBasisPoints) / 10000;
-                      const isCurrent = userAddr === r.recipient?.toLowerCase();
+                  <tbody className="divide-y divide-slate-100">
+                    {escrow.recipients.map((r, i) => {
+                      const pct = (r.percentageBasisPoints / 100).toFixed(1);
+                      const payout = (escrow.totalAmount * r.percentageBasisPoints) / 10000;
+                      const isMe = userAddr === r.recipient?.toLowerCase();
+
                       return (
-                        <tr key={idx} className={isCurrent ? 'bg-blue-50/60' : 'hover:bg-slate-50'}>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-slate-900">{r.name || `Recipient #${idx + 1}`}</span>
-                              {isCurrent && <span className="rounded bg-blue-100 text-blue-800 text-[10px] font-bold px-1.5 py-0.5">You</span>}
-                            </div>
+                        <tr key={i} className={isMe ? 'bg-blue-50/50 font-semibold' : ''}>
+                          <td className="p-3 font-bold text-slate-900 flex items-center gap-1.5">
+                            {r.name || `Recipient ${i + 1}`}
+                            {r.recipient.toLowerCase() === escrow.leadFreelancer.toLowerCase() && (
+                              <span title="Team Lead"><Crown className="h-3.5 w-3.5 text-amber-500" /></span>
+                            )}
+                            {isMe && <span className="text-[9px] text-blue-600 font-extrabold uppercase">(You)</span>}
                           </td>
-                          <td className="py-3 px-4 font-mono text-slate-500">{formatAddress(r.recipient, 6)}</td>
-                          <td className="py-3 px-4 text-right font-mono font-bold">{r.percentageBasisPoints} bps ({pct}%)</td>
-                          <td className="py-3 px-4 text-right font-extrabold text-emerald-700">{formatUSDC(amount)}</td>
+                          <td className="p-3 font-mono text-[11px] text-slate-500">{formatAddress(r.recipient, 6)}</td>
+                          <td className="p-3 text-center font-bold">{pct}%</td>
+                          <td className="p-3 text-right font-extrabold text-emerald-700">${payout.toFixed(2)}</td>
                         </tr>
                       );
                     })}
@@ -442,152 +1075,118 @@ export default function EscrowDetailPage() {
               </div>
             </div>
 
-            {/* Security notice for non-clients viewing delivered state */}
-            {escrow.status === STATUS_CODES.DELIVERED && !isClient && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex items-center gap-3 text-xs">
-                <Shield className="h-5 w-5 text-slate-400 shrink-0" />
-                <div>
-                  <span className="font-bold text-slate-900">Cryptographic Authorization Protection Active</span>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    You're viewing as <strong>{user?.name}</strong>. On-chain Move security restricts payout approval strictly to the Client (<strong>{escrow.clientName || formatAddress(escrow.client, 6)}</strong>).
-                  </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Official Pact Document Modal ── */}
+      {showAgreementModal && (
+        <OfficialPactDocumentModal
+          escrow={escrow}
+          isOpen={showAgreementModal}
+          onClose={() => setShowAgreementModal(false)}
+          userRole={isClient ? 'client' : isFreelancer ? 'freelancer' : 'guest'}
+          isLeadFreelancer={isFreelancer}
+          onAccept={async () => {
+            await acceptAgreement(escrow.id);
+            setSuccessMessage('Pact Agreement accepted! You are authorized to begin work.');
+          }}
+          onReject={async (reason) => {
+            await rejectAgreement(escrow.id, reason);
+            setSuccessMessage('Pact declined and full funds refunded to client.');
+          }}
+          onNegotiate={async (notes, proposedAmount, proposedRecipients) => {
+            await negotiateAgreement(escrow.id, notes, proposedAmount, proposedRecipients);
+            setSuccessMessage('Counter-offer and updated split schedule sent to client.');
+          }}
+        />
+      )}
+
+      {/* ── Release Double-Confirmation Modal (Item 14) ── */}
+      {showReleaseConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-2.5 text-emerald-600">
+              <CheckCircle2 className="h-6 w-6" />
+              <h3 className="text-base font-extrabold text-slate-900">Confirm Payment Release</h3>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              You are about to release <strong>{formatUSDC(escrow.totalAmount)} USDC</strong> to the freelancer team. This transaction executes directly on Sui Testnet and is <strong>irreversible</strong>.
+            </p>
+
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-1.5 text-xs">
+              <div className="font-bold text-slate-700">Atomic Payout Summary:</div>
+              {escrow.recipients.map((r, i) => (
+                <div key={i} className="flex justify-between text-slate-600 text-[11px]">
+                  <span>{r.name || `Recipient ${i + 1}`} ({(r.percentageBasisPoints / 100).toFixed(1)}%):</span>
+                  <strong className="text-emerald-700 font-mono">
+                    ${((escrow.totalAmount * r.percentageBasisPoints) / 10000).toFixed(2)} USDC
+                  </strong>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
 
-            {/* Action Controls */}
-            <div className="border-t border-slate-100 pt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-1.5 rounded-xl bg-blue-50 border border-blue-100 px-3 py-2 text-xs font-bold text-blue-700 w-fit">
-                <Zap className="h-3.5 w-3.5 text-yellow-500" /> $0.00 Gas Sponsored by Relayer
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                {/* LOCKED: Client can refund */}
-                {escrow.status === STATUS_CODES.LOCKED && isClient && (
-                  confirmAction === 'refund' ? (
-                    <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-2 text-xs">
-                      <span className="font-bold text-rose-800 px-2">Are you sure?</span>
-                      <button onClick={() => setConfirmAction(null)} className="rounded-lg bg-white border border-slate-200 px-3 py-1.5 font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
-                      <button onClick={handleRefund} disabled={loadingAction === 'refund'} className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-1.5 font-bold text-white hover:bg-rose-700 transition-all disabled:opacity-50">
-                        {loadingAction === 'refund' ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
-                        Confirm Refund
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={handleRefund}
-                      className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all">
-                      <RotateCcw className="h-3.5 w-3.5" /> Refund Deposit
-                    </button>
-                  )
-                )}
-
-                {/* DELIVERED: Client can dispute or approve */}
-                {escrow.status === STATUS_CODES.DELIVERED && isClient && (
-                  <>
-                    {confirmAction === 'dispute' ? (
-                      <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-2 text-xs">
-                        <span className="font-bold text-rose-800 px-2">Lock funds?</span>
-                        <button onClick={() => setConfirmAction(null)} className="rounded-lg bg-white border border-slate-200 px-3 py-1.5 font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
-                        <button onClick={handleDispute} disabled={loadingAction === 'dispute'} className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-1.5 font-bold text-white hover:bg-rose-700 transition-all disabled:opacity-50">
-                          {loadingAction === 'dispute' ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
-                          Confirm Dispute
-                        </button>
-                      </div>
-                    ) : (
-                      <button onClick={handleDispute}
-                        className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-all">
-                        <AlertTriangle className="h-3.5 w-3.5" /> Raise Dispute
-                      </button>
-                    )}
-
-                    <button onClick={handleApprove} disabled={!!loadingAction}
-                      className="flex items-center gap-2 rounded-xl bg-blue-gradient px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-800/20 hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-50">
-                      {loadingAction === 'approve' ? (
-                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Executing PTB...</>
-                      ) : (
-                        <><Zap className="h-4 w-4 text-yellow-300" /> Approve & Release Split Payout</>
-                      )}
-                    </button>
-                  </>
-                )}
-
-                {/* DELIVERED: Non-client sees lock */}
-                {escrow.status === STATUS_CODES.DELIVERED && !isClient && (
-                  <div className="flex items-center gap-2 rounded-xl bg-slate-100 border border-slate-200 px-4 py-2.5 text-xs text-slate-500 font-semibold">
-                    <Lock className="h-4 w-4 text-slate-400" />
-                    Release locked — awaiting Client ({escrow.clientName || formatAddress(escrow.client, 4)})
-                  </div>
-                )}
-
-                {/* DISPUTED: Contract parties can agree */}
-                {escrow.status === STATUS_CODES.DISPUTED && (isClient || isFreelancer) && (
-                  <button onClick={handleAgree} disabled={loadingAction === 'agree'}
-                    className="flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-amber-700 transition-all disabled:opacity-50">
-                    {loadingAction === 'agree' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                    Agree to Release (Mutual Consent)
-                  </button>
-                )}
-
-                {/* RELEASED */}
-                {escrow.status === STATUS_CODES.RELEASED && (
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Order Settled · All Payouts Disbursed
-                  </div>
-                )}
-              </div>
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                onClick={() => setShowReleaseConfirmModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeRelease}
+                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-xs font-extrabold text-white shadow-md shadow-emerald-600/20"
+              >
+                Confirm & Release Funds
+              </button>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Tx Audit Log */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-            <Hash className="h-4 w-4 text-blue-600" /> On-Chain Transaction Audit Log
-          </h3>
-          <div className="divide-y divide-slate-100 text-xs">
-            {escrow.txHistory.map((tx, idx) => (
-              <div key={idx} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-2 w-2 rounded-full bg-blue-600 shrink-0" />
-                  <span className="font-bold text-slate-900">{tx.action}</span>
-                </div>
-                <div className="flex items-center gap-4 text-slate-500">
-                  <span>{formatDate(tx.timestamp)}</span>
-                  <a href={getSuiScanTxUrl(tx.digest)} target="_blank" rel="noopener noreferrer"
-                    className="font-mono font-bold text-blue-700 hover:underline flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
-                    {formatAddress(tx.digest, 6)} <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              </div>
-            ))}
+      {/* ── Penalty Cancellation Confirmation Modal (Item 15) ── */}
+      {showPenaltyCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-rose-200 space-y-4">
+            <div className="flex items-center gap-2 text-rose-600">
+              <AlertTriangle className="h-5 w-5" />
+              <h3 className="text-base font-extrabold text-slate-900">Early Termination with Penalty</h3>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Because the freelancer team has already accepted and commenced work, cancelling now will disburse a <strong>25% compensation penalty (${(escrow.totalAmount * 0.25).toFixed(2)} USDC)</strong> to the Lead Freelancer, while returning <strong>75% (${(escrow.totalAmount * 0.75).toFixed(2)} USDC)</strong> to your wallet.
+            </p>
+
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                onClick={() => setShowPenaltyCancelModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                Abort
+              </button>
+              <button
+                onClick={handlePenaltyCancel}
+                className="rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2 text-xs font-extrabold text-white shadow-sm"
+              >
+                Confirm Cancellation & Pay 25%
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
+      )}
 
-// ── SHA-256 fingerprint display for already-submitted proof ────────────────
-function ProofFingerprint({ uri }: { uri: string }) {
-  const [hash, setHash] = React.useState<string | null>(null);
+      {/* ── In-App PDF Document Inspector Modal ── */}
+      {viewingPDF && (
+        <PDFDocumentViewerModal
+          isOpen={!!viewingPDF}
+          onClose={() => setViewingPDF(null)}
+          documentUrl={viewingPDF.url}
+          documentName={viewingPDF.name}
+          title={viewingPDF.title}
+        />
+      )}
 
-  React.useEffect(() => {
-    sha256Fingerprint(uri).then(setHash);
-  }, [uri]);
-
-  if (!hash) return null;
-
-  return (
-    <div className="rounded-xl bg-violet-50 border border-violet-100 p-3 space-y-1.5">
-      <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-violet-700 uppercase">
-        <Fingerprint className="h-3.5 w-3.5" /> Immutable SHA-256 Proof Fingerprint
-      </div>
-      <div className="font-mono text-[10px] text-slate-700 break-all leading-relaxed bg-white rounded-lg px-2 py-1.5 border border-violet-100">
-        {hash}
-      </div>
-      <div className="text-[10px] text-violet-600 font-medium">
-        This cryptographic hash proves exactly which deliverable URI was bound to this escrow on-chain. Tampering with the URI would invalidate this fingerprint.
-      </div>
     </div>
   );
 }

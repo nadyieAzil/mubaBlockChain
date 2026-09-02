@@ -6,22 +6,25 @@ import { Coins, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import { SUI_CONFIG } from '@/config/sui';
 
 export const DisclaimerBanner: React.FC = () => {
-  const { user } = useAuth();
+  const { user, claimFaucet } = useAuth();
   const [funding, setFunding] = useState(false);
   const [funded, setFunded] = useState(false);
 
   const requestDemoFunds = async () => {
-    if (!user?.address) return;
     setFunding(true);
     try {
-      await fetch(`${SUI_CONFIG.relayerUrl}/api/faucet`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: user.address }),
-      });
+      if (user?.address) {
+        fetch(`${SUI_CONFIG.relayerUrl}/api/faucet`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: user.address }),
+        }).catch(() => {});
+      }
+      claimFaucet(1000);
       setFunded(true);
       setTimeout(() => setFunded(false), 4000);
     } catch (e) {
+      claimFaucet(1000);
       setFunded(true);
       setTimeout(() => setFunded(false), 4000);
     } finally {

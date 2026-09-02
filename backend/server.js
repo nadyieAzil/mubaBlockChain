@@ -648,6 +648,67 @@ app.get('/api/object/:objectId', async (req, res) => {
   }
 });
 
+// ── Shared Escrow Sync Store (Ensures Client & Freelancer see same data across browsers) ──
+const ESCROW_STORE_PATH = path.join(__dirname, 'escrows_store.json');
+
+function loadSharedEscrows() {
+  if (fs.existsSync(ESCROW_STORE_PATH)) {
+    try {
+      return JSON.parse(fs.readFileSync(ESCROW_STORE_PATH, 'utf8'));
+    } catch (e) {}
+  }
+  return [];
+}
+
+function saveSharedEscrows(escrows) {
+  try {
+    fs.writeFileSync(ESCROW_STORE_PATH, JSON.stringify(escrows, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[Store Error]:', e.message);
+  }
+}
+
+app.get('/api/escrows', (req, res) => {
+  res.json(loadSharedEscrows());
+});
+
+app.post('/api/escrows', (req, res) => {
+  const item = req.body;
+  if (!item || !item.id) return res.status(400).json({ error: 'Missing escrow item or id' });
+  const all = loadSharedEscrows();
+  const existingIdx = all.findIndex(e => e.id === item.id);
+  if (existingIdx >= 0) {
+    all[existingIdx] = { ...all[existingIdx], ...item };
+  } else {
+    all.unshift(item);
+  }
+  saveSharedEscrows(all);
+  res.json({ success: true, escrow: item });
+});
+
+app.patch('/api/escrows/:id', (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  const all = loadSharedEscrows();
+  const idx = all.findIndex(e => e.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'Escrow not found' });
+  all[idx] = { ...all[idx], ...updates };
+  saveSharedEscrows(all);
+  res.json({ success: true, escrow: all[idx] });
+});
+
+// ── Reset Demo State Endpoint ─────────────────────────────────────────────
+app.post('/api/reset-demo', (req, res) => {
+  try {
+    if (fs.existsSync(ESCROW_STORE_PATH)) {
+      fs.unlinkSync(ESCROW_STORE_PATH);
+    }
+    res.json({ success: true, message: 'Backend escrow store reset to pristine defaults' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 SuiPact Gas Relayer + Move Executor on http://localhost:${PORT}`);
   console.log(`   Sponsor: ${sponsorAddress}`);

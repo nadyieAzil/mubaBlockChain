@@ -253,3 +253,104 @@
   border: 4px solid transparent;
   border-top-color: #0f172a;
 }
+
+/* ── Formal A4 Vector Print Engine (Strict 1-Page Guarantee) ────────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 5mm 8mm;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide app navigation, footers, and utility bars */
+  nav,
+  footer,
+  aside,
+  header,
+  .print-hide,
+  .print\:hidden {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  #official-pact-print-modal-root {
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    overflow: visible !important;
+    display: block !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  #official-pact-print-wrapper {
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  #official-pact-print-body {
+    visibility: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  #official-document-sheet {
+    visibility: visible !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 6px 10px !important;
+    border: 1.5px solid #000000 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    break-after: avoid !important;
+  }
+
+  #official-document-sheet * {
+    visibility: visible !important;
+  }
+
+  .print-hide,
+  .print\:hidden {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
