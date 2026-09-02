@@ -9,7 +9,9 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import { DisclaimerBanner } from '@/components/DisclaimerBanner';
 import { PTBFlowVisualizer } from '@/components/PTBFlowVisualizer';
+import { AIDeliverableAuditCard } from '@/components/AIDeliverableAuditCard';
 import { STATUS_CODES, getSuiScanTxUrl, getSuiScanObjectUrl } from '@/config/sui';
+
 import { formatUSDC, formatAddress, formatDate } from '@/lib/utils';
 import {
   ArrowLeft,
@@ -321,6 +323,13 @@ export default function EscrowDetailPage() {
                   </div>
                   {/* SHA-256 Fingerprint of submitted URI */}
                   <ProofFingerprint uri={escrow.deliveryProofUri} />
+
+                  {/* AI Deliverable Quality Audit Card */}
+                  <AIDeliverableAuditCard
+                    escrowTitle={escrow.title}
+                    scopeDescription={escrow.title}
+                    deliverableUrl={escrow.deliveryProofUri}
+                  />
                 </div>
               ) : (
                 <div className="text-xs text-slate-500 italic leading-relaxed">

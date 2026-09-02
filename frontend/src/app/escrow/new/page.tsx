@@ -6,6 +6,7 @@ import { useAuth, PRESET_DEMO_ACCOUNTS } from '@/context/AuthContext';
 import { useEscrow, Recipient } from '@/context/EscrowContext';
 import { SplitPieChart, SLICE_COLORS } from '@/components/SplitPieChart';
 import { DisclaimerBanner } from '@/components/DisclaimerBanner';
+import { AIPactBuilderModal } from '@/components/AIPactBuilderModal';
 import { SUI_CONFIG } from '@/config/sui';
 import { formatUSDC } from '@/lib/utils';
 import {
@@ -18,6 +19,7 @@ import {
   Plus,
   Trash2,
   HelpCircle,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -35,6 +37,7 @@ export default function NewEscrowPage() {
   const { user } = useAuth();
   const { createEscrow } = useEscrow();
 
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [leadFreelancer, setLeadFreelancer] = useState(PRESET_DEMO_ACCOUNTS[1].address);
@@ -46,6 +49,27 @@ export default function NewEscrowPage() {
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleApplyAIResult = (result: {
+    title: string;
+    description: string;
+    totalAmount: number;
+    recipients: Array<{ name: string; percentageBasisPoints: number }>;
+  }) => {
+    if (result.title) setTitle(result.title);
+    if (result.description) setDescription(result.description);
+    if (result.totalAmount) setTotalAmount(result.totalAmount);
+    if (result.recipients && result.recipients.length > 0) {
+      const mappedRecipients: Recipient[] = result.recipients.map((r, idx) => ({
+        name: r.name,
+        recipient: PRESET_DEMO_ACCOUNTS[(idx + 1) % PRESET_DEMO_ACCOUNTS.length].address,
+        percentageBasisPoints: r.percentageBasisPoints,
+      }));
+      setRecipients(mappedRecipients);
+      if (mappedRecipients[0]) setLeadFreelancer(mappedRecipients[0].recipient);
+    }
+  };
+
 
   const totalBps = recipients.reduce((acc, r) => acc + (Number(r.percentageBasisPoints) || 0), 0);
   const isValidBps = totalBps === SUI_CONFIG.basisPointsTotal;
@@ -121,7 +145,7 @@ export default function NewEscrowPage() {
 
       {/* Header */}
       <div className="border-b border-slate-200 pb-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
             <Lock className="h-5 w-5" />
           </div>
@@ -129,11 +153,22 @@ export default function NewEscrowPage() {
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Create Service Escrow Order</h1>
             <p className="text-xs text-slate-500 mt-0.5">Lock USDC → Deliver proof → Atomic team split in 1 transaction</p>
           </div>
-          <span className="ml-auto rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white">Sui Move</span>
+          
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAiModalOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:from-blue-700 hover:to-purple-700 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Sparkles className="h-4 w-4 animate-pulse text-amber-300" /> Auto-Fill with AI
+            </button>
+            <span className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white">Sui Move</span>
+          </div>
         </div>
       </div>
 
       <DisclaimerBanner />
+
 
       {/* Main 2-Column Layout */}
       <div className="grid lg:grid-cols-12 gap-6">
@@ -362,6 +397,13 @@ export default function NewEscrowPage() {
           </div>
         </div>
       </div>
+
+      <AIPactBuilderModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        onApply={handleApplyAIResult}
+      />
     </div>
   );
 }
+
