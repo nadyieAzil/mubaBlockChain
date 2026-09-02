@@ -12,7 +12,7 @@ import { PTBFlowVisualizer } from '@/components/PTBFlowVisualizer';
 import { AIDeliverableAuditCard } from '@/components/AIDeliverableAuditCard';
 import { STATUS_CODES, getSuiScanTxUrl, getSuiScanObjectUrl } from '@/config/sui';
 
-import { formatUSDC, formatAddress, formatDate } from '@/lib/utils';
+import { formatUSDC, formatAddress, formatDate, sanitizeDeliverableUri } from '@/lib/utils';
 import {
   ArrowLeft,
   ExternalLink,
@@ -110,11 +110,15 @@ export default function EscrowDetailPage() {
       setErrorMessage(`Security Warning: Only the Lead Freelancer (${escrow.freelancerName || escrow.leadFreelancer}) can submit proof.`);
       return;
     }
-    if (!proofInput.trim()) return;
+    const { isValid, sanitizedUrl } = sanitizeDeliverableUri(proofInput);
+    if (!isValid || !sanitizedUrl) {
+      setErrorMessage('Security Alert: Invalid deliverable URL. Only secure https://, http:// or ipfs:// URLs are permitted.');
+      return;
+    }
     setLoadingAction('deliver');
     setErrorMessage(null);
     try {
-      await submitDeliverable(escrow.id, proofInput.trim());
+      await submitDeliverable(escrow.id, sanitizedUrl);
       setSuccessMessage('✅ Proof of delivery submitted on Sui Testnet! SHA-256 fingerprint recorded as immutable commitment.');
       setProofInput('');
       setProofFingerprint(null);
@@ -313,7 +317,7 @@ export default function EscrowDetailPage() {
                     <div className="flex items-center justify-between gap-3">
                       <div className="font-mono text-xs text-blue-700 font-bold truncate flex-1">{escrow.deliveryProofUri}</div>
                       <a
-                        href={escrow.deliveryProofUri.startsWith('http') ? escrow.deliveryProofUri : `https://${escrow.deliveryProofUri}`}
+                        href={sanitizeDeliverableUri(escrow.deliveryProofUri).sanitizedUrl || '#'}
                         target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-1.5 shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-colors"
                       >

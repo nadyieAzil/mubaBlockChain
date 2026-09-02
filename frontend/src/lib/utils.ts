@@ -40,3 +40,38 @@ export function formatDate(timestamp: number | string | Date): string {
     minute: '2-digit',
   });
 }
+
+/**
+ * Validates whether a string conforms to a valid Sui 64-hex object/account address format.
+ */
+export function isValidSuiAddress(address?: string | null): boolean {
+  if (!address || typeof address !== 'string') return false;
+  const trimmed = address.trim();
+  // Accepts standard 0x prefixed hex addresses (up to 64 hex characters)
+  return /^0x[a-fA-F0-9]{1,64}$/.test(trimmed);
+}
+
+/**
+ * Strictly sanitizes and validates proof/deliverable URIs against dangerous schemes (javascript:, data:, vbscript:).
+ */
+export function sanitizeDeliverableUri(uri?: string | null): { isValid: boolean; sanitizedUrl: string } {
+  if (!uri || typeof uri !== 'string') return { isValid: false, sanitizedUrl: '' };
+  const trimmed = uri.trim();
+  
+  // Disallow scripts and dangerous pseudo-protocols
+  if (/^(javascript:|data:|vbscript:|file:)/i.test(trimmed)) {
+    return { isValid: false, sanitizedUrl: '' };
+  }
+
+  // Enforce http/https or ipfs protocols
+  if (trimmed.startsWith('https://') || trimmed.startsWith('http://') || trimmed.startsWith('ipfs://')) {
+    return { isValid: true, sanitizedUrl: trimmed };
+  }
+
+  // If provided as a domain without scheme (e.g. github.com/user/repo), prepend https://
+  if (/^[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}(\/.*)?$/.test(trimmed)) {
+    return { isValid: true, sanitizedUrl: `https://${trimmed}` };
+  }
+
+  return { isValid: false, sanitizedUrl: '' };
+}

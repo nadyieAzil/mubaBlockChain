@@ -15,8 +15,111 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const SUI_RPC_URL = process.env.SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443';
 
-app.use(cors());
-app.use(express.json());
+// ── Security Middlewares & Headers ─────────────────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// Whitelist CORS configuration (supports dev, localhost, and production)
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+  process.env.FRONTEND_URL || 'https://suipact.app',
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, server-to-server, curl) or matched localhost origins
+      if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        return callback(null, true);
+      }
+      return callback(new Error('Cross-Origin Request Blocked by SuiPact CORS Policy'));
+    },
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: '100kb' }));
+
+// ── In-Memory Rate Limiting Engine ─────────────────────────────────────────
+const rateLimitMap = new Map();
+function createRateLimiter({ windowMs, maxRequests, message }) {
+  return (req, res, next) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const clientRecord = rateLimitMap.get(ip) || [];
+    const recentRequests = clientRecord.filter((timestamp) => now - timestamp < windowMs);
+
+    if (recentRequests.length >= maxRequests) {
+      return res.status(429).json({
+        error: message || 'Too many requests from this IP, please try again later.',
+      });
+    }
+
+    recentRequests.push(now);
+    rateLimitMap.set(ip, recentRequests);
+    next();
+  };
+}
+
+const aiLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 20, // 20 requests/minute for AI
+  message: 'AI generation rate limit reached. Please wait a moment before retrying.',
+});
+
+const relayerLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 60, // 60 transactions/minute
+  message: 'Transaction submission rate limit reached. Please wait a moment.',
+});
+
+const faucetLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 10, // 10 faucet requests/minute
+  message: 'Faucet rate limit reached. Please wait before requesting more test tokens.',
+});
+
+function sanitizeString(str, maxLength = 1000) {
+  if (typeof str !== 'string') return '';
+  return str.trim().slice(0, maxLength);
+}
+
+function isValidSuiAddress(addr) {
+  if (!addr || typeof addr !== 'string') return false;
+  return /^0x[a-fA-F0-9]{1,64}$/.test(addr.trim());
+}
+
+function sanitizeDeliverableUri(uri) {
+  if (!uri || typeof uri !== 'string') return null;
+  const trimmed = uri.trim();
+  if (/^(javascript:|data:|vbscript:|file:)/i.test(trimmed)) return null;
+  if (trimmed.startsWith('https://') || trimmed.startsWith('http://') || trimmed.startsWith('ipfs://')) {
+    return trimmed;
+  }
+  if (/^[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}(\/.*)?$/.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  return null;
+}
+
+function filterPromptInjection(text) {
+  if (typeof text !== 'string') return '';
+  return text
+    .replace(/ignore\s+(all\s+)?(previous|prior)\s+instructions/gi, '[filtered]')
+    .replace(/system\s+override/gi, '[filtered]')
+    .replace(/disregard\s+(all\s+)?instructions/gi, '[filtered]')
+    .replace(/you\s+are\s+now\s+/gi, '[filtered]');
+}
 
 // ── Move abort code → human readable messages ─────────────────────────────
 const MOVE_ABORT_MESSAGES = {
@@ -144,7 +247,7 @@ app.get('/api/health', async (req, res) => {
 // ── Core: Execute Move Function ───────────────────────────────────────────
 // This is the main endpoint that wires the frontend to real on-chain calls.
 // The sponsor keypair acts as BOTH user AND gas payer for demo-mode personas.
-app.post('/api/execute-move', async (req, res) => {
+app.post('/api/execute-move', relayerLimiter, async (req, res) => {
   try {
     const { functionName, typeArgs = [], args = [] } = req.body;
 
@@ -164,6 +267,13 @@ app.post('/api/execute-move', async (req, res) => {
       // args: [lead_freelancer, title, recipient_addrs[], recipient_bps[], amount_mist]
       const [leadFreelancer, title, recipientAddrs, recipientBps, amountMist] = args;
 
+      if (!isValidSuiAddress(leadFreelancer)) {
+        return res.status(400).json({ error: 'Invalid lead freelancer Sui address format.' });
+      }
+      if (!Array.isArray(recipientAddrs) || !recipientAddrs.every(isValidSuiAddress)) {
+        return res.status(400).json({ error: 'Invalid recipient Sui addresses provided.' });
+      }
+
       // Split SUI from gas coin to use as deposit
       const [depositCoin] = tx.splitCoins(tx.gas, [BigInt(amountMist)]);
 
@@ -172,7 +282,7 @@ app.post('/api/execute-move', async (req, res) => {
         typeArguments: typeArgs.length > 0 ? typeArgs : ['0x2::sui::SUI'],
         arguments: [
           tx.pure.address(leadFreelancer),
-          tx.pure.vector('u8', Array.from(new TextEncoder().encode(title))),
+          tx.pure.vector('u8', Array.from(new TextEncoder().encode(sanitizeString(title, 200)))),
           tx.pure.vector('address', recipientAddrs),
           tx.pure.vector('u64', recipientBps.map(BigInt)),
           depositCoin,
@@ -180,16 +290,24 @@ app.post('/api/execute-move', async (req, res) => {
       });
     } else if (functionName === 'submit_deliverable_entry') {
       const [escrowId, proofUri] = args;
+      if (!isValidSuiAddress(escrowId)) {
+        return res.status(400).json({ error: 'Invalid escrow object ID format.' });
+      }
+      const safeUri = sanitizeDeliverableUri(proofUri);
+      if (!safeUri) {
+        return res.status(400).json({ error: 'Invalid or dangerous deliverable URL format.' });
+      }
       tx.moveCall({
         target: `${packageId}::${module_}::submit_deliverable_entry`,
         typeArguments: typeArgs.length > 0 ? typeArgs : ['0x2::sui::SUI'],
         arguments: [
           tx.object(escrowId),
-          tx.pure.vector('u8', Array.from(new TextEncoder().encode(proofUri))),
+          tx.pure.vector('u8', Array.from(new TextEncoder().encode(safeUri))),
         ],
       });
     } else if (functionName === 'approve_and_split_payout_entry') {
       const [escrowId] = args;
+      if (!isValidSuiAddress(escrowId)) return res.status(400).json({ error: 'Invalid escrow object ID format.' });
       tx.moveCall({
         target: `${packageId}::${module_}::approve_and_split_payout_entry`,
         typeArguments: typeArgs.length > 0 ? typeArgs : ['0x2::sui::SUI'],
@@ -197,6 +315,7 @@ app.post('/api/execute-move', async (req, res) => {
       });
     } else if (functionName === 'refund_client_entry') {
       const [escrowId] = args;
+      if (!isValidSuiAddress(escrowId)) return res.status(400).json({ error: 'Invalid escrow object ID format.' });
       tx.moveCall({
         target: `${packageId}::${module_}::refund_client_entry`,
         typeArguments: typeArgs.length > 0 ? typeArgs : ['0x2::sui::SUI'],
@@ -204,6 +323,7 @@ app.post('/api/execute-move', async (req, res) => {
       });
     } else if (functionName === 'raise_dispute_entry') {
       const [escrowId] = args;
+      if (!isValidSuiAddress(escrowId)) return res.status(400).json({ error: 'Invalid escrow object ID format.' });
       tx.moveCall({
         target: `${packageId}::${module_}::raise_dispute_entry`,
         typeArguments: typeArgs.length > 0 ? typeArgs : ['0x2::sui::SUI'],
@@ -211,6 +331,7 @@ app.post('/api/execute-move', async (req, res) => {
       });
     } else if (functionName === 'agree_to_release_entry') {
       const [escrowId] = args;
+      if (!isValidSuiAddress(escrowId)) return res.status(400).json({ error: 'Invalid escrow object ID format.' });
       tx.moveCall({
         target: `${packageId}::${module_}::agree_to_release_entry`,
         typeArguments: typeArgs.length > 0 ? typeArgs : ['0x2::sui::SUI'],
@@ -256,7 +377,7 @@ app.post('/api/execute-move', async (req, res) => {
 });
 
 // ── Sponsor Transaction (legacy endpoint for PTB flow) ────────────────────
-app.post('/api/sponsor-transaction', async (req, res) => {
+app.post('/api/sponsor-transaction', relayerLimiter, async (req, res) => {
   try {
     const { txBytes, sender } = req.body;
     if (!txBytes || !sender) {
@@ -293,7 +414,7 @@ app.post('/api/sponsor-transaction', async (req, res) => {
 });
 
 // ── Faucet Helper ─────────────────────────────────────────────────────────
-app.post('/api/faucet', async (req, res) => {
+app.post('/api/faucet', faucetLimiter, async (req, res) => {
   try {
     const { address } = req.body;
     if (!address) return res.status(400).json({ error: 'Missing recipient address' });
@@ -313,12 +434,13 @@ app.post('/api/faucet', async (req, res) => {
 });
 
 // ── OpenRouter AI Pact Builder Endpoint ──────────────────────────────────
-app.post('/api/ai/generate-escrow', async (req, res) => {
+app.post('/api/ai/generate-escrow', aiLimiter, async (req, res) => {
   try {
-    const { prompt } = req.body;
-    if (!prompt || typeof prompt !== 'string') {
+    const rawPrompt = req.body?.prompt;
+    if (!rawPrompt || typeof rawPrompt !== 'string' || rawPrompt.trim().length === 0) {
       return res.status(400).json({ error: 'Missing prompt text' });
     }
+    const prompt = sanitizeString(rawPrompt, 500);
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     const model = process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
@@ -383,6 +505,9 @@ Example JSON output structure:
   ]
 }`;
 
+    const cleanPrompt = filterPromptInjection(prompt);
+    const userMessage = `<user_project_request>\n${cleanPrompt}\n</user_project_request>`;
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -395,7 +520,7 @@ Example JSON output structure:
         model: model,
         messages: [
           { role: 'system', content: systemInstruction },
-          { role: 'user', content: prompt }
+          { role: 'user', content: userMessage }
         ],
         temperature: 0.2,
         max_tokens: 600
@@ -437,9 +562,11 @@ Example JSON output structure:
 });
 
 // ── OpenRouter AI Deliverable Audit Endpoint ─────────────────────────────
-app.post('/api/ai/audit-deliverable', async (req, res) => {
+app.post('/api/ai/audit-deliverable', aiLimiter, async (req, res) => {
   try {
-    const { escrowTitle, scopeDescription, deliverableUrl } = req.body;
+    const escrowTitle = sanitizeString(req.body?.escrowTitle, 200);
+    const scopeDescription = sanitizeString(req.body?.scopeDescription, 1000);
+    const deliverableUrl = sanitizeString(req.body?.deliverableUrl, 500);
     
     const apiKey = process.env.OPENROUTER_API_KEY;
     const model = process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
@@ -473,7 +600,7 @@ app.post('/api/ai/audit-deliverable', async (req, res) => {
           },
           {
             role: 'user',
-            content: `Escrow Title: ${escrowTitle}\nScope: ${scopeDescription}\nDeliverable URL: ${deliverableUrl}`
+            content: `<escrow_audit_request>\nEscrow Title: ${filterPromptInjection(escrowTitle)}\nScope: ${filterPromptInjection(scopeDescription)}\nDeliverable URL: ${sanitizeDeliverableUri(deliverableUrl) || 'https://github.com'}\n</escrow_audit_request>`
           }
         ],
         temperature: 0.1,

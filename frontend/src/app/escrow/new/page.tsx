@@ -8,7 +8,7 @@ import { SplitPieChart, SLICE_COLORS } from '@/components/SplitPieChart';
 import { DisclaimerBanner } from '@/components/DisclaimerBanner';
 import { AIPactBuilderModal } from '@/components/AIPactBuilderModal';
 import { SUI_CONFIG } from '@/config/sui';
-import { formatUSDC } from '@/lib/utils';
+import { formatUSDC, isValidSuiAddress } from '@/lib/utils';
 import {
   ShieldCheck,
   Zap,
@@ -91,7 +91,13 @@ export default function NewEscrowPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) { setError('Please enter a deliverable title.'); return; }
-    if (!leadFreelancer.trim() || !leadFreelancer.startsWith('0x')) { setError('Please enter a valid lead freelancer Sui address (0x...).'); return; }
+    if (!isValidSuiAddress(leadFreelancer)) { setError('Please enter a valid Sui address (0x...) for the Lead Freelancer.'); return; }
+    for (const r of recipients) {
+      if (!isValidSuiAddress(r.recipient)) {
+        setError(`Please enter a valid Sui 64-hex address (0x...) for recipient: ${r.name || 'Unnamed'}`);
+        return;
+      }
+    }
     if (totalAmount <= 0) { setError('Deposit amount must be greater than 0 USDC.'); return; }
     if (!isValidBps) { setError('Total basis points must sum to exactly 10,000 (100%).'); return; }
 
