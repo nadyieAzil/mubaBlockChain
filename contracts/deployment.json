@@ -1,0 +1,12 @@
+{
+  "network": "testnet",
+  "packageId": "0x8c57edf140ac229fb7e11652e8d9dcded7fd63dda683adfd7fd9c5bed1db5a18",
+  "packageIdV1": "0x86edb7211b5b15566739b5a0ae689a669c590a7b0580cbf967c8fd1bc828f1a1",
+  "upgradeCapId": "0x377bfe72994ed7f9816118ba012f200b0aacee9c5a2c8b39a949ed7e679fbb11",
+  "publishTxDigest": "3teRC52TQvDgh9YAVmmoDJvQqMtgUzzpnJgA5QqtQTYf",
+  "upgradeTxDigest": "9yJyrnivjB7LfTgQUobfooZoXezAuTkRp2g761VX537p",
+  "deployer": "0xaf39410b7ef60d0de77312789647ca1a9989784229b275d5a7866e4a610e7771",
+  "modules": ["escrow"],
+  "testnetUsdcType": "0xa1ec7fc00a6f40db9693ad1415d880f9879785369065b2370007891866ad34a2::wusdc::WUSDC",
+  "suiScanUrl": "https://suiscan.xyz/testnet/package/0x8c57edf140ac229fb7e11652e8d9dcded7fd63dda683adfd7fd9c5bed1db5a18"
+}

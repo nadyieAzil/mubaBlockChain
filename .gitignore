@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+frontend/build/
+.next/
+out/
+build/
+dist/
+
+# Environment and Secret Files (Strictly exclude from GitHub)
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+*.env
+*.env.*
+*.key
+*.keystore
+*.pem
+
+# Allow public example template
+!.env.example
+
+# Sui Move build artifacts & traces
+contracts/suipact_escrow/build/
+contracts/suipact_escrow/traces/
+contracts/suipact_escrow/.trace
+contracts/suipact_escrow/.coverage*
+contracts/suipact_escrow/Pub.*.toml
+.sui/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+next-env.d.ts
+.vercel/
+.idea/
+.vscode/
