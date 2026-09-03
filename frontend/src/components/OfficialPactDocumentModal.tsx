@@ -15,6 +15,8 @@ import {
   ShieldCheck,
   FileText,
   Lock,
+  Check,
+  Sparkles,
 } from 'lucide-react';
 
 interface OfficialPactDocumentModalProps {
@@ -150,7 +152,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
               <AlertTriangle className="h-4 w-4 text-amber-700 shrink-0" />
               <p className="text-xs text-amber-900 font-semibold">
                 {escrow.agreementStatus === 'client_approved'
-                  ? `🎉 Client APPROVED your adjusted terms ($${escrow.totalAmount} USDC)! Please review and click "✓ Accept & Start Work" to formally begin execution (or you may still modify or decline).`
+                  ? `Client APPROVED your adjusted terms ($${escrow.totalAmount} USDC)! Please review and click "Accept & Start Work" to formally begin execution (or you may still modify or decline).`
                   : escrow.agreementStatus === 'negotiating'
                   ? `Negotiation proposal active ($${escrow.totalAmount} USDC). You can modify your proposal or accept baseline terms.`
                   : 'Please review the terms and payment splits below before accepting to start work.'}
@@ -161,22 +163,25 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setActionView('negotiate')}
-                  className="rounded-lg border border-amber-300 bg-white hover:bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-900 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white hover:bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-900 transition-colors cursor-pointer"
                 >
-                  {escrow.agreementStatus === 'negotiating' || escrow.agreementStatus === 'client_approved' ? '💬 Modify Rate / Splits' : '💬 Negotiate Rate'}
+                  <MessageSquare className="h-3.5 w-3.5 text-amber-700" />
+                  <span>{escrow.agreementStatus === 'negotiating' || escrow.agreementStatus === 'client_approved' ? 'Modify Rate / Splits' : 'Negotiate Rate'}</span>
                 </button>
                 <button
                   onClick={() => setActionView('reject')}
-                  className="rounded-lg border border-rose-300 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 text-xs font-bold text-rose-700 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 text-xs font-bold text-rose-700 transition-colors cursor-pointer"
                 >
-                  ✕ Decline Project
+                  <X className="h-3.5 w-3.5 text-rose-600" />
+                  <span>Decline Project</span>
                 </button>
                 <button
                   onClick={handleAcceptSubmit}
                   disabled={loading}
-                  className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-all"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-all cursor-pointer"
                 >
-                  ✓ Accept & Start Work
+                  <Check className="h-3.5 w-3.5 text-white" />
+                  <span>Accept &amp; Start Work</span>
                 </button>
               </div>
             )}
@@ -192,8 +197,9 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
                 Official Agreement Finalized &amp; Signed on Sui zkLogin. Terms and splits are legally locked (${formatUSDC(escrow.totalAmount)} USDC).
               </p>
             </div>
-            <span className="text-[10px] uppercase font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
-              ✓ Legally Locked
+            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+              <ShieldCheck className="h-3 w-3 text-emerald-700" />
+              <span>Legally Locked</span>
             </span>
           </div>
         )}
@@ -236,9 +242,11 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-[11px] font-bold text-slate-700">Team Split Allocation Schedule</label>
-                <span className={`text-[10px] font-extrabold ${totalBps === 10000 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  Total: {(totalBps / 100).toFixed(0)}% (${((totalBps / 10000) * proposedBudget).toFixed(2)} USDC) {totalBps !== 10000 && '⚠️ Must equal 100%'}
-                </span>
+                <div className="flex items-center justify-between text-xs font-bold pt-1">
+                  <span className={totalBps === 10000 ? 'text-emerald-700' : 'text-rose-600'}>
+                    Total: {(totalBps / 100).toFixed(0)}% (${((totalBps / 10000) * proposedBudget).toFixed(2)} USDC) {totalBps !== 10000 && '(Split must equal 100%)'}
+                  </span>
+                </div>
               </div>
               <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
                 {proposedRecipients.map((r, i) => {
@@ -410,7 +418,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
                 <p>{escrow.scopeDescription || 'Spesifikasi kerja merangkumi penyediaan reka bentuk, kod pengaturcaraan, dan dokumen serahan rasmi mengikut persetujuan dua pihak.'}</p>
                 {escrow.attachedDocumentName && (
                   <div className="mt-1 pt-1 border-t border-dashed border-slate-400 font-bold text-[8.5px]">
-                    📄 Dokumen Rujukan Terlampir: {escrow.attachedDocumentName}
+                    Lampiran Dokumen Spesifikasi: {escrow.attachedDocumentName}
                   </div>
                 )}
               </div>
@@ -485,7 +493,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
                 <div className="font-bold uppercase text-[8.5px]">DISAHKAN &amp; DITERIMA OLEH (LEAD FREELANCER):</div>
                 <div className="h-5 flex items-center justify-center font-mono text-[8px] text-slate-500 italic bg-slate-50 rounded">
                   {escrow.agreementStatus === 'accepted' ? (
-                    <span className="text-black font-bold">✓ VERIFIED &amp; ACCEPTED ON SUI NETWORK</span>
+                    <span className="text-black font-bold">[ VERIFIED &amp; ACCEPTED ON SUI NETWORK ]</span>
                   ) : (
                     '[ Awaiting Freelancer Acceptance Signature ]'
                   )}

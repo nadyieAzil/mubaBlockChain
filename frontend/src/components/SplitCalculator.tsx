@@ -1,7 +1,7 @@
 import React from 'react';
 import { Recipient } from '@/context/EscrowContext';
 import { formatUSDC, formatAddress } from '@/lib/utils';
-import { Plus, Trash2, Users, AlertCircle, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Users, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
 import { SUI_CONFIG } from '@/config/sui';
 
 interface SplitCalculatorProps {
@@ -187,10 +187,14 @@ export const SplitCalculator: React.FC<SplitCalculatorProps> = ({
         }`}
       >
         <div className="flex items-center gap-1.5">
-          {!isValid && <AlertCircle className="h-4 w-4 text-amber-600" />}
+          {isValid ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          ) : (
+            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+          )}
           <span>
             {isValid
-              ? '✓ Total basis points sum to 10,000 (100.00%) — Validated'
+              ? 'Total basis points sum to 10,000 (100.00%) — Validated'
               : `Total basis points: ${totalBps} / 10,000 (${(totalBps / 100).toFixed(2)}%) — Must sum to 10,000`}
           </span>
         </div>

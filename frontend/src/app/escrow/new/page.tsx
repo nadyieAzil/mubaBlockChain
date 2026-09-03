@@ -30,6 +30,7 @@ import {
   AlertCircle,
   Mail,
   UserCheck,
+  Check,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -566,14 +567,14 @@ export default function NewEscrowPage() {
                               <div className="rounded-lg bg-rose-50 border border-rose-200 p-2 text-xs font-bold text-rose-700 flex items-center gap-2 animate-fade-in">
                                 <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
                                 <span>
-                                  ❌ Duplicate Address Error: Already assigned to Recipient #{dupTargetIndex + 1} ({recipients[dupTargetIndex]?.name || 'Unnamed'}). Each recipient must have a unique wallet.
+                                  Duplicate Address Error: Already assigned to Recipient #{dupTargetIndex + 1} ({recipients[dupTargetIndex]?.name || 'Unnamed'}). Each recipient must have a unique wallet.
                                 </span>
                               </div>
                             ) : isClientSelf ? (
                               <div className="rounded-lg bg-amber-50 border border-amber-200 p-2 text-xs font-bold text-amber-800 flex items-center gap-2 animate-fade-in">
                                 <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
                                 <span>
-                                  ⚠️ Client Wallet Detected: This matches your current Client address. Escrow payouts should be sent to Freelancers.
+                                  Client Wallet Detected: This matches your current Client address. Escrow payouts should be sent to Freelancers.
                                 </span>
                               </div>
                             ) : detectedUser ? (
@@ -581,7 +582,7 @@ export default function NewEscrowPage() {
                                 <div className="flex items-center gap-2">
                                   <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                                   <div>
-                                    <span className="font-extrabold text-emerald-950">✓ Auto-Detected zkLogin Identity:</span>{' '}
+                                    <span className="font-extrabold text-emerald-950">Auto-Detected zkLogin Identity:</span>{' '}
                                     <span className="font-mono font-bold text-emerald-800">{detectedUser.email}</span>
                                     <span className="text-[11px] text-emerald-700 ml-1.5 font-bold">({detectedUser.name})</span>
                                   </div>
@@ -593,7 +594,7 @@ export default function NewEscrowPage() {
                             ) : isValidSuiAddress(r.recipient) ? (
                               <div className="rounded-lg bg-blue-50 border border-blue-200 p-2 text-xs text-blue-900 flex items-center gap-2 animate-fade-in">
                                 <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0" />
-                                <span>✓ Valid Sui 64-Hex Address Format (External Freelancer Wallet)</span>
+                                <span>Valid Sui 64-Hex Address Format (External Freelancer Wallet)</span>
                               </div>
                             ) : (
                               <div className="rounded-lg bg-slate-100 border border-slate-200 p-2 text-xs text-slate-600 flex items-center gap-2">
@@ -660,8 +661,9 @@ export default function NewEscrowPage() {
               <div className="space-y-1.5 pt-2">
                 <div className="flex justify-between text-xs font-bold">
                   <span className="text-slate-500">Total split allocation:</span>
-                  <span className={isValidBps ? 'text-emerald-600' : totalBps > 10000 ? 'text-rose-600' : 'text-amber-600'}>
-                    {(totalBps / 100).toFixed(1)}% / 100% {isValidBps ? '✓ Balanced' : totalBps > 10000 ? '⚠️ Over Budget' : '⚠️ Incomplete'}
+                  <span className={`inline-flex items-center gap-1 ${isValidBps ? 'text-emerald-600' : totalBps > 10000 ? 'text-rose-600' : 'text-amber-600'}`}>
+                    {isValidBps ? <Check className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                    <span>{(totalBps / 100).toFixed(1)}% / 100% {isValidBps ? 'Balanced' : totalBps > 10000 ? 'Over Budget' : 'Incomplete'}</span>
                   </span>
                 </div>
                 <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden">

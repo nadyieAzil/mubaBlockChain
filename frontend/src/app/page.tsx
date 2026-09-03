@@ -19,6 +19,14 @@ import {
   DollarSign,
   TrendingDown,
   Sparkles,
+  Check,
+  X,
+  AlertTriangle,
+  Lightbulb,
+  Layers,
+  KeyRound,
+  FileCheck,
+  Coins,
 } from 'lucide-react';
 import { SUI_CONFIG, getSuiVisionPackageUrl } from '@/config/sui';
 
@@ -158,8 +166,9 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           {/* Story */}
           <div className="space-y-5 animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-              💡 Real-World Scenario
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-bold text-blue-700 shadow-2xs">
+              <Lightbulb className="h-3.5 w-3.5 text-blue-600 icon-hover-wiggle" />
+              <span>Real-World Agency Scenario</span>
             </div>
             <h2 className="text-3xl font-extrabold text-slate-900 leading-tight">
               A 3-person design agency just finished a $2,000 Sui DApp project.
@@ -174,7 +183,7 @@ export default function LandingPage() {
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingDown className="h-4 w-4 text-rose-600" />
-                  <span className="text-sm font-bold text-rose-700">On Fiverr / Upwork</span>
+                  <span className="text-sm font-bold text-rose-700">On Traditional Platforms (Fiverr / Upwork)</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="text-center">
@@ -195,7 +204,7 @@ export default function LandingPage() {
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                  <span className="text-sm font-bold text-emerald-700">On SuiPact</span>
+                  <span className="text-sm font-bold text-emerald-700">On SuiPact (Zero-Gas Move Escrow)</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="text-center">
@@ -217,22 +226,25 @@ export default function LandingPage() {
 
           {/* Visual PTB Flow */}
           <div className="rounded-2xl border border-blue-100 bg-white p-6 shadow-lg shadow-blue-50 space-y-4">
-            <div className="text-xs font-extrabold uppercase tracking-wider text-blue-600 mb-4">
-              SuiPact Atomic Split Flow
+            <div className="text-xs font-extrabold uppercase tracking-wider text-blue-600 mb-4 flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-blue-600" />
+              <span>SuiPact Atomic Split Flow</span>
             </div>
 
             {/* Flow nodes */}
             {[
-              { label: 'Client Locks $2,000 USDC', icon: '🔐', sub: 'Deposited into Move shared object', color: 'bg-blue-50 border-blue-200 text-blue-700' },
-              { label: 'Lead Freelancer Submits GitHub PR', icon: '📎', sub: 'Proof URI bound immutably on-chain', color: 'bg-violet-50 border-violet-200 text-violet-700' },
-              { label: 'Client Approves — 1 Click', icon: '✅', sub: 'Triggers Programmable Transaction Block', color: 'bg-amber-50 border-amber-200 text-amber-700' },
+              { label: 'Client Locks $2,000 USDC', Icon: Lock, sub: 'Deposited into Move shared object', color: 'bg-blue-50 border-blue-200 text-blue-700', iconColor: 'text-blue-600' },
+              { label: 'Lead Freelancer Submits GitHub PR', Icon: FileCheck, sub: 'Proof URI bound immutably on-chain', color: 'bg-violet-50 border-violet-200 text-violet-700', iconColor: 'text-violet-600' },
+              { label: 'Client Approves — 1 Click', Icon: CheckCircle2, sub: 'Triggers Programmable Transaction Block', color: 'bg-amber-50 border-amber-200 text-amber-700', iconColor: 'text-amber-600' },
             ].map((node, i) => (
               <div key={i} className="space-y-1">
-                <div className={`flex items-center gap-3 rounded-xl border p-3 ${node.color}`}>
-                  <span className="text-xl">{node.icon}</span>
+                <div className={`flex items-center gap-3 rounded-xl border p-3.5 ${node.color} transition-all hover:scale-[1.01]`}>
+                  <div className="h-9 w-9 rounded-lg bg-white/80 border border-slate-200/60 flex items-center justify-center shrink-0 shadow-2xs icon-hover-bounce">
+                    <node.Icon className={`h-4.5 w-4.5 ${node.iconColor}`} />
+                  </div>
                   <div>
-                    <div className="text-xs font-bold">{node.label}</div>
-                    <div className="text-[11px] opacity-70">{node.sub}</div>
+                    <div className="text-xs font-bold text-slate-900">{node.label}</div>
+                    <div className="text-[11px] opacity-75">{node.sub}</div>
                   </div>
                 </div>
                 {i < 2 && (
@@ -308,8 +320,10 @@ export default function LandingPage() {
                 tagColor: 'bg-emerald-100 text-emerald-700',
               },
             ].map((step, i) => (
-              <div key={i} className="relative rounded-2xl bg-white border border-blue-100 p-6 shadow-sm card-interactive">
-                <div className="absolute top-4 right-4 text-5xl font-extrabold text-blue-50 select-none">{step.step}</div>
+              <div key={i} className="relative rounded-2xl bg-white border border-blue-100 p-6 shadow-sm card-interactive overflow-hidden">
+                <div className="absolute top-4 right-5 font-mono text-3xl font-black text-blue-400 select-none">
+                  {step.step}
+                </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 mb-4">
                   {step.icon}
                 </div>
@@ -328,8 +342,9 @@ export default function LandingPage() {
       <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid md:grid-cols-2 gap-12 items-start">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 border border-violet-100 px-3 py-1 text-xs font-bold text-violet-700">
-              🔧 Technical Advantage
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 border border-violet-200 px-3 py-1 text-xs font-bold text-violet-700 shadow-2xs">
+              <Layers className="h-3.5 w-3.5 text-violet-600 icon-hover-rotate" />
+              <span>Technical Advantage</span>
             </div>
             <h2 className="text-3xl font-extrabold text-slate-900">Why this is only possible on Sui</h2>
             <p className="text-slate-600 leading-relaxed text-sm">
@@ -338,13 +353,15 @@ export default function LandingPage() {
             </p>
             <div className="space-y-3">
               {[
-                { label: 'Programmable Transaction Blocks', desc: 'Multiple transfers in one atomic tx — impossible on Ethereum without a smart contract per split', icon: '⚡' },
-                { label: 'Object-Centric Move', desc: 'Escrow funds are wrapped in a typed Move object — can\'t be drained without calling the right entry function', icon: '🔐' },
-                { label: 'Native Sponsored Transactions', desc: 'Sui protocol supports a separate gas owner from sender — enabling $0 UX without custom account abstraction', icon: '🆓' },
-                { label: 'zkLogin (Google → Sui Address)', desc: 'Derives a real Sui address from a Google JWT without ever generating a seed phrase', icon: '🔑' },
+                { label: 'Programmable Transaction Blocks', desc: 'Multiple transfers in one atomic tx — impossible on Ethereum without a smart contract per split', Icon: Zap, iconColor: 'text-amber-600 bg-amber-50 border-amber-200' },
+                { label: 'Object-Centric Move', desc: 'Escrow funds are wrapped in a typed Move object — can\'t be drained without calling the right entry function', Icon: Lock, iconColor: 'text-blue-600 bg-blue-50 border-blue-200' },
+                { label: 'Native Sponsored Transactions', desc: 'Sui protocol supports a separate gas owner from sender — enabling $0 UX without custom account abstraction', Icon: Coins, iconColor: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+                { label: 'zkLogin (Google → Sui Address)', desc: 'Derives a real Sui address from a Google JWT without ever generating a seed phrase', Icon: KeyRound, iconColor: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
               ].map((f, i) => (
-                <div key={i} className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3.5 card-interactive">
-                  <span className="text-xl mt-0.5">{f.icon}</span>
+                <div key={i} className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3.5 card-interactive items-center">
+                  <div className={`h-9 w-9 rounded-lg border flex items-center justify-center shrink-0 shadow-2xs ${f.iconColor} icon-hover-bounce`}>
+                    <f.Icon className="h-4.5 w-4.5" />
+                  </div>
                   <div>
                     <div className="text-xs font-extrabold text-slate-900">{f.label}</div>
                     <div className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{f.desc}</div>
@@ -538,13 +555,104 @@ function GasSavingsCalculator() {
 // ── Feature Comparison Table ───────────────────────────────────────────────
 function ComparisonTable() {
   const features = [
-    { label: 'Platform Fee', suipact: '$0.00', fiverr: '10–20%', crypto: '2–5% gas' },
-    { label: 'Settlement Time', suipact: '< 1 second', fiverr: '7–14 days', crypto: '3–5 minutes' },
-    { label: 'Multi-Recipient Split', suipact: '✅ 1 Atomic PTB', fiverr: '❌ Manual only', crypto: '❌ Multiple tx' },
-    { label: 'No Wallet / Seed Phrase', suipact: '✅ Google zkLogin', fiverr: '✅ OAuth', crypto: '❌ Required' },
-    { label: 'On-Chain Proof of Delivery', suipact: '✅ Immutable URI', fiverr: '❌ Off-chain', crypto: '❌ None' },
-    { label: 'Dispute Resolution', suipact: '✅ Mutual-consent', fiverr: '⚠️ Manual arbitration', crypto: '❌ No mechanism' },
-    { label: 'Dust / Rounding Handling', suipact: '✅ Automatic', fiverr: 'N/A', crypto: '❌ None' },
+    {
+      label: 'Platform Fee',
+      suipact: <span className="font-extrabold text-emerald-700">$0.00 (Zero Fee)</span>,
+      fiverr: <span className="text-slate-600">10–20% cut</span>,
+      crypto: <span className="text-slate-600">2–5% gas</span>,
+    },
+    {
+      label: 'Settlement Time',
+      suipact: <span className="font-extrabold text-emerald-700">&lt; 1 second (~400ms)</span>,
+      fiverr: <span className="text-slate-600">7–14 days</span>,
+      crypto: <span className="text-slate-600">3–5 minutes</span>,
+    },
+    {
+      label: 'Multi-Recipient Split',
+      suipact: (
+        <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
+          <Check className="h-3.5 w-3.5 text-emerald-600" /> 1 Atomic PTB
+        </span>
+      ),
+      fiverr: (
+        <span className="inline-flex items-center gap-1 text-slate-500">
+          <X className="h-3.5 w-3.5 text-rose-400" /> Manual only
+        </span>
+      ),
+      crypto: (
+        <span className="inline-flex items-center gap-1 text-slate-500">
+          <X className="h-3.5 w-3.5 text-rose-400" /> Multiple tx
+        </span>
+      ),
+    },
+    {
+      label: 'No Wallet / Seed Phrase',
+      suipact: (
+        <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
+          <Check className="h-3.5 w-3.5 text-emerald-600" /> Google zkLogin
+        </span>
+      ),
+      fiverr: (
+        <span className="inline-flex items-center gap-1 text-slate-600">
+          <Check className="h-3.5 w-3.5 text-emerald-500" /> OAuth
+        </span>
+      ),
+      crypto: (
+        <span className="inline-flex items-center gap-1 text-rose-600 font-semibold">
+          <X className="h-3.5 w-3.5 text-rose-500" /> Required
+        </span>
+      ),
+    },
+    {
+      label: 'On-Chain Proof of Delivery',
+      suipact: (
+        <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
+          <Check className="h-3.5 w-3.5 text-emerald-600" /> Immutable URI
+        </span>
+      ),
+      fiverr: (
+        <span className="inline-flex items-center gap-1 text-slate-500">
+          <X className="h-3.5 w-3.5 text-rose-400" /> Off-chain
+        </span>
+      ),
+      crypto: (
+        <span className="inline-flex items-center gap-1 text-slate-400">
+          <X className="h-3.5 w-3.5 text-slate-300" /> None
+        </span>
+      ),
+    },
+    {
+      label: 'Dispute Resolution',
+      suipact: (
+        <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
+          <Check className="h-3.5 w-3.5 text-emerald-600" /> Mutual-consent
+        </span>
+      ),
+      fiverr: (
+        <span className="inline-flex items-center gap-1 text-amber-700 font-semibold">
+          <AlertTriangle className="h-3.5 w-3.5 text-amber-500" /> Manual arbitration
+        </span>
+      ),
+      crypto: (
+        <span className="inline-flex items-center gap-1 text-slate-500">
+          <X className="h-3.5 w-3.5 text-rose-400" /> No mechanism
+        </span>
+      ),
+    },
+    {
+      label: 'Dust / Rounding Handling',
+      suipact: (
+        <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
+          <Check className="h-3.5 w-3.5 text-emerald-600" /> Automatic
+        </span>
+      ),
+      fiverr: <span className="text-slate-400">N/A</span>,
+      crypto: (
+        <span className="inline-flex items-center gap-1 text-slate-400">
+          <X className="h-3.5 w-3.5 text-slate-300" /> None
+        </span>
+      ),
+    },
   ];
 
   return (
@@ -565,9 +673,9 @@ function ComparisonTable() {
           {features.map((f, i) => (
             <div key={i} className={`grid grid-cols-4 border-t border-slate-100 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
               <div className="p-4 text-xs font-semibold text-slate-700">{f.label}</div>
-              <div className="p-4 text-xs font-bold text-center text-emerald-700 bg-emerald-50/50">{f.suipact}</div>
-              <div className="p-4 text-xs text-center text-slate-500">{f.fiverr}</div>
-              <div className="p-4 text-xs text-center text-slate-500">{f.crypto}</div>
+              <div className="p-4 text-xs font-bold text-center bg-emerald-50/50 flex items-center justify-center">{f.suipact}</div>
+              <div className="p-4 text-xs text-center flex items-center justify-center">{f.fiverr}</div>
+              <div className="p-4 text-xs text-center flex items-center justify-center">{f.crypto}</div>
             </div>
           ))}
         </div>

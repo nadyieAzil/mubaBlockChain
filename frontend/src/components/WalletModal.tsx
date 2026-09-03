@@ -112,9 +112,10 @@ export const WalletModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowManualForm(true)}
-                  className="text-xs font-bold text-blue-600 hover:underline"
+                  className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
-                  Enter custom Google email & name ➔
+                  <span>Enter custom Google email &amp; name</span>
+                  <ArrowRight className="h-3 w-3" />
                 </button>
               </div>
             </div>

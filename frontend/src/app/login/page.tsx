@@ -12,6 +12,14 @@ import {
   ChevronRight,
   AlertCircle,
   CheckCircle2,
+  Briefcase,
+  Code2,
+  KeyRound,
+  Sparkles,
+  Building2,
+  Users,
+  Scale,
+  Lock,
 } from 'lucide-react';
 
 // ── Google Consent Screen Simulation ───────────────────────────────
@@ -229,9 +237,63 @@ function LoginForm() {
   };
 
   const demoPersonas = [
-    { account: PRESET_DEMO_ACCOUNTS[0], emoji: '💼', desc: 'Creates & funds escrow orders' },
-    { account: PRESET_DEMO_ACCOUNTS[1], emoji: '🎨', desc: 'Submits deliverables, receives payout' },
+    { account: PRESET_DEMO_ACCOUNTS[0], Icon: Building2, desc: 'Client: Creates & funds escrow orders', iconColor: 'text-blue-600 bg-blue-50 border-blue-200' },
+    { account: PRESET_DEMO_ACCOUNTS[1], Icon: Code2, desc: 'Lead Freelancer: Submits deliverables & manages disputes', iconColor: 'text-amber-600 bg-amber-50 border-amber-200' },
+    { account: PRESET_DEMO_ACCOUNTS[2], Icon: Users, desc: 'Team Member: Designer recipient in Bob\'s team', iconColor: 'text-violet-600 bg-violet-50 border-violet-200' },
   ];
+
+  const slides = [
+    {
+      badge: 'Sui Track 01 · Payments & Stablecoins',
+      title: 'Finally, team payments done right — on Sui blockchain.',
+      features: [
+        { icon: <ShieldCheck className="h-4 w-4" />, text: 'Google zkLogin — no seed phrase' },
+        { icon: <Zap className="h-4 w-4 text-yellow-300" />, text: '$0.00 gas — sponsor pays all fees' },
+        { icon: <CheckCircle2 className="h-4 w-4 text-emerald-300" />, text: 'Atomic 1-PTB team split payout' },
+      ],
+    },
+    {
+      badge: 'Decentralized Mediation · Move Shared Object',
+      title: 'Fair Hybrid Dispute Resolution with AI & Mutual Signatures.',
+      features: [
+        { icon: <Scale className="h-4 w-4 text-amber-300" />, text: 'AI Gemini-analyzed deliverable verdicts' },
+        { icon: <ShieldCheck className="h-4 w-4" />, text: 'Dual-consent cryptographic approvals' },
+        { icon: <Users className="h-4 w-4 text-violet-300" />, text: 'Transparent split payout to every team member' },
+      ],
+    },
+    {
+      badge: 'Zero Middleman Fees · Instant Finality',
+      title: 'Empowering digital agencies with automated on-chain payouts.',
+      features: [
+        { icon: <Lock className="h-4 w-4 text-blue-300" />, text: 'Client funds locked safely in Sui smart contract' },
+        { icon: <Zap className="h-4 w-4 text-yellow-300" />, text: 'Sub-second finality on Sui network (~400ms)' },
+        { icon: <CheckCircle2 className="h-4 w-4 text-emerald-300" />, text: '100% free from traditional 20% platform fees' },
+      ],
+    },
+  ];
+
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  const handlePrevSlide = () => {
+    setActiveSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const handleNextSlide = () => {
+    setActiveSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const handleSwitchMode = (m: 'signin' | 'signup') => {
+    setAuthMode(m);
+    setFormError(null);
+    router.replace(`/login?mode=${m}`, { scroll: false });
+  };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 sm:p-6 bg-blue-gradient-soft">
@@ -260,21 +322,23 @@ function LoginForm() {
             <div className="flex rounded-2xl bg-slate-100 p-1 border border-slate-200 mb-2">
               <button
                 type="button"
-                onClick={() => { setAuthMode('signin'); setFormError(null); }}
-                className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all ${
+                onClick={() => handleSwitchMode('signin')}
+                className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   authMode === 'signin' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                🔑 Sign In
+                <KeyRound className="h-3.5 w-3.5" />
+                <span>Sign In</span>
               </button>
               <button
                 type="button"
-                onClick={() => { setAuthMode('signup'); setFormError(null); }}
-                className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all ${
+                onClick={() => handleSwitchMode('signup')}
+                className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   authMode === 'signup' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                ✨ Create Account (Sign Up)
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Create Account (Sign Up)</span>
               </button>
             </div>
 
@@ -337,21 +401,25 @@ function LoginForm() {
                           : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
                       }`}
                     >
-                      <div className="text-base mb-1">💼</div>
+                      <div className="h-8 w-8 rounded-xl bg-blue-100/70 border border-blue-200 flex items-center justify-center text-blue-700 mb-1.5 icon-hover-bounce">
+                        <Building2 className="h-4 w-4" />
+                      </div>
                       <div className="text-xs font-extrabold text-slate-900">Client</div>
-                      <div className="text-[10px] text-slate-500 leading-tight">Deposit USDC, hire & approve</div>
+                      <div className="text-[10px] text-slate-500 leading-tight">Deposit USDC, hire &amp; approve</div>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setRoleInput('freelancer')}
-                      className={`p-3 rounded-2xl border text-left transition-all ${
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                         roleInput === 'freelancer'
                           ? 'border-blue-500 bg-blue-50/70 ring-2 ring-blue-200'
                           : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
                       }`}
                     >
-                      <div className="text-base mb-1">🎨</div>
+                      <div className="h-8 w-8 rounded-xl bg-amber-100/70 border border-amber-200 flex items-center justify-center text-amber-700 mb-1.5 icon-hover-bounce">
+                        <Code2 className="h-4 w-4" />
+                      </div>
                       <div className="text-xs font-extrabold text-slate-900">Freelancer</div>
                       <div className="text-[10px] text-slate-500 leading-tight">Deliver proof, receive split payouts</div>
                     </button>
@@ -363,8 +431,12 @@ function LoginForm() {
               detectedRole && (
                 <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 flex items-center justify-between animate-fade-in text-xs font-bold text-emerald-800">
                   <span>Detected Role:</span>
-                  <span className="uppercase px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px]">
-                    {detectedRole === 'client' ? '💼 Client' : '🎨 Freelancer'}
+                  <span className="uppercase px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] inline-flex items-center gap-1">
+                    {detectedRole === 'client' ? (
+                      <><Building2 className="h-2.5 w-2.5" /> Client</>
+                    ) : (
+                      <><Code2 className="h-2.5 w-2.5" /> Freelancer</>
+                    )}
                   </span>
                 </div>
               )
@@ -382,7 +454,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading || !emailInput}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] py-3.5 text-xs font-extrabold text-white shadow-lg shadow-blue-600/30 disabled:opacity-50 transition-all"
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] py-3.5 text-xs font-extrabold text-white shadow-lg shadow-blue-600/30 disabled:opacity-50 transition-all cursor-pointer"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -404,23 +476,25 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* Demo Personas */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Demo Personas (Alice, Bob, Charlie) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {demoPersonas.map((p, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => handleDemoPersona(i)}
-                className="flex flex-col items-start gap-1 rounded-2xl border-2 border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/50 transition-all p-3.5 text-left card-interactive"
+                className="flex flex-col items-start gap-1 rounded-2xl border-2 border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/50 transition-all p-3 text-left card-interactive cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">{p.emoji}</span>
+                  <div className={`h-7 w-7 rounded-xl border flex items-center justify-center shrink-0 ${p.iconColor} icon-hover-bounce`}>
+                    <p.Icon className="h-3.5 w-3.5" />
+                  </div>
                   <div>
                     <div className="text-xs font-extrabold text-slate-900">{p.account.name.split(' ')[0]}</div>
-                    <div className="text-[9px] uppercase font-bold text-blue-600 bg-blue-50 px-1.5 rounded">{p.account.role}</div>
+                    <div className="text-[9px] uppercase font-bold text-blue-600 bg-blue-50 px-1 rounded">{p.account.role.replace('_', ' ')}</div>
                   </div>
                 </div>
-                <div className="text-[10px] text-slate-500 leading-relaxed mt-1">{p.desc}</div>
+                <div className="text-[10px] text-slate-500 leading-snug mt-1">{p.desc}</div>
               </button>
             ))}
           </div>
@@ -430,7 +504,7 @@ function LoginForm() {
           </p>
         </div>
 
-        {/* ── Right: Visual Artwork ── */}
+        {/* ── Right: Visual Artwork with Active Interactive Carousel ── */}
         <div className="lg:col-span-6 relative min-h-[380px] lg:min-h-auto bg-blue-gradient flex flex-col justify-between p-8 overflow-hidden">
           {/* Background orbs */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -447,37 +521,61 @@ function LoginForm() {
 
           {/* Top badge */}
           <div className="relative z-10 flex justify-end">
-            <span className="rounded-full bg-white/15 backdrop-blur-sm px-3.5 py-1 text-xs font-bold text-white border border-white/20">
-              Sui Track 01 · Payments & Stablecoins
+            <span className="rounded-full bg-white/15 backdrop-blur-sm px-3.5 py-1 text-xs font-bold text-white border border-white/20 transition-all">
+              {slides[activeSlide].badge}
             </span>
           </div>
 
-          {/* Feature pills (middle) */}
-          <div className="relative z-10 space-y-3">
-            {[
-              { icon: <ShieldCheck className="h-4 w-4" />, text: 'Google zkLogin — no seed phrase' },
-              { icon: <Zap className="h-4 w-4 text-yellow-300" />, text: '$0.00 gas — sponsor pays all fees' },
-              { icon: <CheckCircle2 className="h-4 w-4 text-emerald-300" />, text: 'Atomic 1-PTB team split payout' },
-            ].map((f, i) => (
-              <div key={i} className={`flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 p-3 animate-fade-in-left delay-${(i + 2) * 100}`}>
-                <div className="text-white">{f.icon}</div>
+          {/* Feature pills (middle) with animated key for slide transitions */}
+          <div key={`features-${activeSlide}`} className="relative z-10 space-y-3 animate-fade-in">
+            {slides[activeSlide].features.map((f, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 p-3">
+                <div className="text-white shrink-0">{f.icon}</div>
                 <span className="text-sm font-semibold text-white">{f.text}</span>
               </div>
             ))}
           </div>
 
-          {/* Bottom caption & carousel arrows */}
+          {/* Bottom caption, pagination dots & carousel arrows */}
           <div className="relative z-10 space-y-3">
-            <h2 className="text-xl font-bold text-white leading-snug">
-              Finally, team payments done right — on Sui blockchain.
+            <h2 key={`title-${activeSlide}`} className="text-xl font-bold text-white leading-snug animate-fade-in">
+              {slides[activeSlide].title}
             </h2>
-            <div className="flex items-center gap-2">
-              <button type="button" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white border border-white/20 transition-colors">
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button type="button" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white border border-white/20 transition-colors">
-                <ChevronRight className="h-4 w-4" />
-              </button>
+            <div className="flex items-center justify-between pt-1">
+              {/* Slide indicators */}
+              <div className="flex items-center gap-1.5">
+                {slides.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveSlide(idx)}
+                    className={`h-2 rounded-full transition-all cursor-pointer ${
+                      activeSlide === idx ? 'w-6 bg-white' : 'w-2 bg-white/40 hover:bg-white/60'
+                    }`}
+                    title={`Go to slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Navigation Arrows */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrevSlide}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/30 active:scale-95 backdrop-blur-sm text-white border border-white/20 transition-all cursor-pointer"
+                  title="Previous highlight"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextSlide}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/30 active:scale-95 backdrop-blur-sm text-white border border-white/20 transition-all cursor-pointer"
+                  title="Next highlight"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

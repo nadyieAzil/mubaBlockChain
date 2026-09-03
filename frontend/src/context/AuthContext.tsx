@@ -236,7 +236,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(newBalances));
       return newBalances;
     });
-    showNotification(`💰 +$${amount.toLocaleString()} Testnet USDC deposited to your wallet!`);
+    showNotification(`+$${amount.toLocaleString()} Testnet USDC deposited to your wallet!`);
   };
 
   const resetDemoState = () => {
@@ -250,7 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setBalances(finalResetBalances);
     localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(finalResetBalances));
-    showNotification('🔄 Demo wallet balances and state reset to initial pristine values (Custom user: $0.00 USDC)!');
+    showNotification('Demo wallet balances and state reset to initial pristine values (Custom user: $0.00 USDC).');
   };
 
   const deductBalance = (amount: number, address?: string) => {
@@ -287,7 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(newBalances));
       return newBalances;
     });
-    showNotification(`💳 +$${amount.toLocaleString()} USDC added to your wallet via ${method}!`);
+    showNotification(`+$${amount.toLocaleString()} USDC added to your wallet via ${method}!`);
   };
 
   const resetBalance = (toAmount = 0) => {
@@ -298,7 +298,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(newBalances));
       return newBalances;
     });
-    showNotification(toAmount === 0 ? '🔄 Wallet balance reset to $0.00 USDC.' : `🔄 Wallet balance set to $${toAmount.toLocaleString()} USDC.`);
+    showNotification(toAmount === 0 ? 'Wallet balance reset to $0.00 USDC.' : `Wallet balance set to $${toAmount.toLocaleString()} USDC.`);
   };
 
   const userAddrClean = user?.address?.toLowerCase() || '';

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, Loader2, ArrowRight, CheckCircle2, Wand2, RefreshCw, AlertCircle, Play } from 'lucide-react';
+import { Sparkles, Loader2, ArrowRight, CheckCircle2, Wand2, RefreshCw, AlertCircle, Play, X } from 'lucide-react';
 
 interface AIPactResult {
   title: string;
@@ -90,9 +90,9 @@ export function AIPactBuilderModal({ isOpen, onClose, onApply }: AIPactBuilderMo
           </div>
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors text-sm font-bold"
+            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
           >
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
 

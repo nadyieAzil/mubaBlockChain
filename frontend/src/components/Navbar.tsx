@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { formatAddress, formatUSDC } from '@/lib/utils';
 import { WalletTopUpModal } from '@/components/WalletTopUpModal';
@@ -23,6 +23,9 @@ import {
   RotateCcw,
   Wallet,
   Trash2,
+  Building2,
+  Code2,
+  Users,
 } from 'lucide-react';
 import { getSuiVisionPackageUrl, getSuiScanAddressUrl } from '@/config/sui';
 
@@ -149,12 +152,18 @@ export const Navbar: React.FC = () => {
                     <div className="text-left hidden sm:block">
                       <div className="font-bold text-white flex items-center gap-1.5">
                         {user.name.split(' ')[0]}
-                        <span className={`text-[9px] uppercase font-extrabold px-1.5 rounded ${
+                        <span className={`text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded flex items-center gap-1 ${
                           user.role === 'client'
                             ? 'bg-blue-300/20 text-blue-100 border border-blue-200/30'
                             : 'bg-yellow-400/20 text-yellow-200 border border-yellow-300/30'
                         }`}>
-                          {user.role === 'client' ? '🏢 Client' : user.role === 'freelancer' ? '💻 Freelancer' : '👥 Team Member'}
+                          {user.role === 'client' ? (
+                            <><Building2 className="h-2.5 w-2.5" /> Client</>
+                          ) : user.role === 'freelancer' ? (
+                            <><Code2 className="h-2.5 w-2.5" /> Freelancer</>
+                          ) : (
+                            <><Users className="h-2.5 w-2.5" /> Team</>
+                          )}
                         </span>
                       </div>
                       <div className="text-[10px] text-blue-200 font-mono">{formatAddress(user.address, 4)}</div>
@@ -174,8 +183,14 @@ export const Navbar: React.FC = () => {
                             <div>
                               <h4 className="text-sm font-extrabold text-white">{user.name}</h4>
                               <p className="text-[11px] text-blue-100">{user.email || 'No email'}</p>
-                              <span className="inline-block mt-1 rounded bg-white/20 text-white text-[9px] font-extrabold uppercase px-2 py-0.5">
-                                {user.role === 'client' ? '🏢 Client Account' : user.role === 'freelancer' ? '💻 Freelancer Account' : '👥 Team Member'}
+                              <span className="inline-flex items-center gap-1 mt-1 rounded bg-white/20 text-white text-[9px] font-extrabold uppercase px-2 py-0.5">
+                                {user.role === 'client' ? (
+                                  <><Building2 className="h-2.5 w-2.5" /> Client Account</>
+                                ) : user.role === 'freelancer' ? (
+                                  <><Code2 className="h-2.5 w-2.5" /> Freelancer Account</>
+                                ) : (
+                                  <><Users className="h-2.5 w-2.5" /> Team Member</>
+                                )}
                               </span>
                             </div>
                           </div>
@@ -264,30 +279,16 @@ export const Navbar: React.FC = () => {
                 </div>
               </>
             ) : (
-              <div className="flex items-center gap-2">
-                {/* Gas Pill on Public Pages */}
-                <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-bold text-white">
-                  <Zap className="h-3.5 w-3.5 text-yellow-300" />
-                  <span>$0.00 Gas</span>
-                  <span className="text-blue-200 font-normal">Sponsored</span>
-                </div>
-
-                {/* Distinct Sign In and Sign Up buttons */}
-                <Link
-                  href="/login?mode=signin"
-                  className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 px-3.5 py-1.5 text-xs font-bold text-white transition-all"
-                >
-                  <LogIn className="h-3.5 w-3.5" />
-                  Sign In
-                </Link>
-                <Link
-                  href="/login?mode=signup"
-                  className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-1.5 text-xs font-bold text-blue-700 shadow-sm hover:bg-blue-50 active:scale-[0.98] transition-all"
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  Sign Up
-                </Link>
-              </div>
+              <Suspense
+                fallback={
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-20 rounded-xl bg-white/10 animate-pulse" />
+                    <div className="h-8 w-20 rounded-xl bg-white animate-pulse" />
+                  </div>
+                }
+              >
+                <NavbarAuthButtons />
+              </Suspense>
             )}
           </div>
         </div>
@@ -299,5 +300,53 @@ export const Navbar: React.FC = () => {
         onClose={() => setShowTopUpModal(false)}
       />
     </>
+  );
+};
+
+// Component for dynamic Sign In / Sign Up active pill state
+const NavbarAuthButtons: React.FC = () => {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const mode = searchParams?.get('mode');
+
+  const isLoginPage = pathname === '/login';
+  const isSignInActive = isLoginPage && mode !== 'signup';
+  const isSignUpActive = isLoginPage && mode === 'signup';
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Gas Pill on Public Pages */}
+      <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-bold text-white">
+        <Zap className="h-3.5 w-3.5 text-yellow-300" />
+        <span>$0.00 Gas</span>
+        <span className="text-blue-200 font-normal">Sponsored</span>
+      </div>
+
+      {/* Dynamic Sign In and Sign Up buttons */}
+      <Link
+        href="/login?mode=signin"
+        className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+          isSignInActive
+            ? 'bg-white text-blue-700 shadow-md ring-2 ring-white/50 scale-[1.02]'
+            : 'border border-white/20 bg-white/10 hover:bg-white/20 text-white'
+        }`}
+      >
+        <LogIn className="h-3.5 w-3.5" />
+        <span>Sign In</span>
+      </Link>
+      <Link
+        href="/login?mode=signup"
+        className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+          isSignUpActive
+            ? 'bg-white text-blue-700 shadow-md ring-2 ring-white/50 scale-[1.02]'
+            : !isLoginPage
+            ? 'bg-white text-blue-700 shadow-sm hover:bg-blue-50'
+            : 'border border-white/20 bg-white/10 hover:bg-white/20 text-white'
+        }`}
+      >
+        <UserPlus className="h-3.5 w-3.5" />
+        <span>Sign Up</span>
+      </Link>
+    </div>
   );
 };

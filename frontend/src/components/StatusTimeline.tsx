@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { STATUS_CODES, getSuiScanTxUrl } from '@/config/sui';
 import { formatDate, formatAddress } from '@/lib/utils';
-import { Check, Clock, ExternalLink, Lock, Eye, CheckCircle2, Shield } from 'lucide-react';
+import { Check, Clock, ExternalLink, Lock, Eye, CheckCircle2, Shield, Zap } from 'lucide-react';
 
 interface TimelineProps {
   status: number;
@@ -93,15 +93,19 @@ export const StatusTimeline: React.FC<TimelineProps> = ({ status, txHistory }) =
                   : 'opacity-70 cursor-not-allowed'
               } ${isSelected ? 'bg-blue-50/80 border border-blue-200 ring-1 ring-blue-300' : ''}`}
             >
-              {/* Connector line for desktop */}
-              {idx < steps.length - 1 && (
-                <div
-                  className={`hidden md:block absolute top-7 left-10 right-0 h-0.5 ${
-                    step.isCompleted ? 'bg-blue-600' : 'bg-slate-200'
-                  }`}
-                  style={{ zIndex: 0 }}
-                />
-              )}
+              {/* Connector line for desktop - rendered across all phases including final phase */}
+              <div
+                className={`hidden md:block absolute top-7 left-10 ${
+                  idx < steps.length - 1 ? 'right-[-24px]' : 'right-0'
+                } h-0.5 transition-colors ${
+                  step.isCompleted
+                    ? 'bg-blue-600'
+                    : step.isActive
+                    ? 'bg-amber-400'
+                    : 'bg-slate-200'
+                }`}
+                style={{ zIndex: 0 }}
+              />
 
               {/* Step Circle */}
               <div
@@ -132,11 +136,20 @@ export const StatusTimeline: React.FC<TimelineProps> = ({ status, txHistory }) =
                 </div>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{step.desc}</p>
                 {step.isCompleted ? (
-                  <span className="inline-block text-[9px] font-bold text-emerald-600 mt-1 uppercase">✓ Verified on Sui (Click to Inspect)</span>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 mt-1 uppercase">
+                    <CheckCircle2 className="h-2.5 w-2.5" />
+                    <span>Verified on Sui (Click to Inspect)</span>
+                  </span>
                 ) : step.isActive ? (
-                  <span className="inline-block text-[9px] font-bold text-amber-600 mt-1 uppercase">⚡ Current Active Task</span>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-600 mt-1 uppercase">
+                    <Zap className="h-2.5 w-2.5" />
+                    <span>Current Active Task</span>
+                  </span>
                 ) : (
-                  <span className="inline-block text-[9px] font-bold text-slate-400 mt-1 uppercase">🔒 Locked (Next Phase)</span>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-400 mt-1 uppercase">
+                    <Lock className="h-2.5 w-2.5" />
+                    <span>Locked (Next Phase)</span>
+                  </span>
                 )}
               </div>
             </div>

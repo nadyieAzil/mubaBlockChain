@@ -13,6 +13,9 @@ import {
   Play,
   Zap,
   CheckCircle2,
+  Briefcase,
+  Crown,
+  Users,
 } from 'lucide-react';
 
 export const DemoSandboxBar: React.FC = () => {
@@ -38,6 +41,11 @@ export const DemoSandboxBar: React.FC = () => {
     loginWithDemo(PRESET_DEMO_ACCOUNTS[0]);
   };
 
+  const handleSwitchToCharlie = () => {
+    // Switch to Charlie (Team Member / UI Designer)
+    loginWithDemo(PRESET_DEMO_ACCOUNTS[2]);
+  };
+
   const handleFullReset = async () => {
     setIsResetting(true);
     try {
@@ -52,61 +60,78 @@ export const DemoSandboxBar: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 max-w-md w-full px-2 sm:px-0">
+    <div className="fixed bottom-4 right-4 z-40 max-w-lg w-full px-2 sm:px-0">
       <div className="rounded-2xl border-2 border-blue-500 bg-slate-900/95 text-white shadow-2xl backdrop-blur-md overflow-hidden transition-all">
         {/* Top Header Toggle Bar */}
         <div
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center justify-between px-4 py-2.5 bg-blue-600/90 hover:bg-blue-600 cursor-pointer select-none transition-colors"
+          className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-blue-700 to-indigo-700 cursor-pointer hover:from-blue-600 hover:to-indigo-600 transition-all select-none"
         >
           <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-            <Sparkles className="h-4 w-4 text-yellow-300" />
-            <span className="text-xs font-extrabold tracking-wide uppercase">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <Sparkles className="h-4 w-4 text-yellow-300 animate-pulse" />
+            <span className="text-xs font-black uppercase tracking-wider text-white">
               Demo Sandbox Controller
             </span>
           </div>
+
           <div className="flex items-center gap-2">
-            <span className="text-[10px] bg-blue-700/80 px-2 py-0.5 rounded-full font-bold">
-              {user ? user.name.split(' ')[0] : 'Guest'}
+            <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold uppercase text-blue-100">
+              {user?.name?.split(' ')[0] || 'Guest'}
             </span>
-            {isOpen ? <ChevronDown className="h-4 w-4 text-blue-200" /> : <ChevronUp className="h-4 w-4 text-blue-200" />}
+            {isOpen ? <ChevronDown className="h-4 w-4 text-white/80" /> : <ChevronUp className="h-4 w-4 text-white/80" />}
           </div>
         </div>
 
-        {/* Collapsible Content */}
+        {/* Collapsible Sandbox Body */}
         {isOpen && (
           <div className="p-4 space-y-3 text-xs">
             <p className="text-[11px] text-slate-300 leading-snug">
-              Uji aliran penuh antara <strong>Client</strong> &amp; <strong>Freelancer</strong>, atau tetapkan semula semua baki dan kontrak kepada nilai asal bila-bila masa.
+              Uji peranan antara <strong>Client</strong>, <strong>Lead Freelancer</strong>, &amp; <strong>Team Member (Sub-freelancer)</strong> untuk menguji ketelusan dispute.
             </p>
 
-            {/* Quick Switch Persona Buttons */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Quick Switch Persona Buttons (3 Roles) */}
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={handleSwitchToAlice}
-                className={`flex items-center justify-center gap-1.5 rounded-xl border p-2 text-xs font-bold transition-all ${
+                className={`flex items-center justify-center gap-1 rounded-xl border p-2 text-[11px] font-bold transition-all cursor-pointer ${
                   user?.email === 'alice.client@suipact.dev'
                     ? 'border-emerald-400 bg-emerald-950/60 text-emerald-300 ring-1 ring-emerald-400'
                     : 'border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200'
                 }`}
               >
-                <span>💼</span>
-                <span>Alice (Client)</span>
+                <Briefcase className="h-3 w-3 text-blue-400 icon-hover-bounce shrink-0" />
+                <span className="truncate">Alice (Client)</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleSwitchToBob}
-                className={`flex items-center justify-center gap-1.5 rounded-xl border p-2 text-xs font-bold transition-all ${
+                className={`flex items-center justify-center gap-1 rounded-xl border p-2 text-[11px] font-bold transition-all cursor-pointer ${
                   user?.email === 'bob.lead@agency.studio'
                     ? 'border-amber-400 bg-amber-950/60 text-amber-300 ring-1 ring-amber-400'
                     : 'border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200'
                 }`}
               >
-                <span>👑</span>
-                <span>Bob (Lead Free)</span>
+                <Crown className="h-3 w-3 text-amber-400 icon-hover-bounce shrink-0" />
+                <span className="truncate">Bob (Lead Free)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSwitchToCharlie}
+                className={`flex items-center justify-center gap-1 rounded-xl border p-2 text-[11px] font-bold transition-all cursor-pointer ${
+                  user?.email === 'charlie.design@agency.studio'
+                    ? 'border-violet-400 bg-violet-950/60 text-violet-300 ring-1 ring-violet-400'
+                    : 'border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200'
+                }`}
+              >
+                <Users className="h-3 w-3 text-violet-400 icon-hover-bounce shrink-0" />
+                <span className="truncate">Charlie (Team)</span>
               </button>
             </div>
 

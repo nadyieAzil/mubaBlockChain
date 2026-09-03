@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowRight, X, Lock, FileCheck, CheckCircle2, Zap } from 'lucide-react';
+import { ArrowRight, X, Lock, FileCheck, CheckCircle2, Zap, Sparkles } from 'lucide-react';
 
 const TOUR_STEPS = [
   {
-    icon: <span className="text-3xl">👋</span>,
+    icon: <Sparkles className="h-8 w-8 text-yellow-300 icon-hover-bounce" />,
     title: 'Welcome to SuiPact!',
     desc: 'SuiPact is a zero-gas stablecoin escrow on Sui Testnet. It lets clients and freelancers settle project payments safely — without middlemen or platform fees.',
     role: 'Your Role',
@@ -45,7 +45,7 @@ const TOUR_STEPS = [
     icon: <CheckCircle2 className="h-8 w-8 text-white" />,
     title: "You're Ready!",
     desc: "That's the entire SuiPact flow. Head to the Dashboard to see your orders, or create a new escrow now. Your demo personas (Alice/Bob) are pre-funded on Sui Testnet.",
-    role: '💡 Pro tip',
+    role: 'Pro Tip',
     roleDesc: 'Log in as Alice Corp (Client) to create and fund escrow. Then switch to Bob Vance (Freelancer) to submit deliverables.',
     color: 'from-blue-700 to-blue-900',
     pillColor: 'bg-yellow-100 text-yellow-700',

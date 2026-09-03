@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Zap, CheckCircle2, Users, ArrowRight } from 'lucide-react';
+import { Zap, CheckCircle2, Users, ArrowRight, Lock } from 'lucide-react';
 
 interface Recipient {
   name?: string;
@@ -110,7 +110,10 @@ export const PTBFlowVisualizer: React.FC<PTBFlowVisualizerProps> = ({
             {/* Escrow Source */}
             <div className="flex items-center justify-center gap-3">
               <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-center shadow-sm">
-                <div className="text-xs font-extrabold text-blue-700">🔐 Escrow Contract</div>
+                <div className="text-xs font-extrabold text-blue-700 flex items-center justify-center gap-1">
+                  <Lock className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Escrow Contract</span>
+                </div>
                 <div className="text-base font-extrabold text-slate-900 mt-0.5">${totalAmount.toLocaleString()} USDC</div>
               </div>
             </div>

@@ -14,7 +14,8 @@ import { formatUSDC, formatAddress, formatDate } from '@/lib/utils';
 import {
   Plus, Search, Lock, ArrowUpRight, Users, CheckCircle2, Coins,
   Shield, ShieldCheck, Eye, FolderLock, Zap, LogIn, AlertCircle, Clock,
-  ChevronDown, ChevronUp, Inbox, Star,
+  ChevronDown, ChevronUp, Inbox, Star, Building2, Code2, FileText,
+  MessageSquare, RotateCcw, Upload, AlertTriangle, Check, PenTool,
 } from 'lucide-react';
 
 // ── Action priority classification ────────────────────────────────────────
@@ -24,7 +25,7 @@ interface ActionCard {
   escrow: EscrowItem;
   priority: ActionPriority;
   actionLabel: string;
-  actionIcon: string;
+  actionIcon: React.ReactNode;
   description: string;
 }
 
@@ -43,7 +44,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'urgent',
       actionLabel: 'Sign Agreement',
-      actionIcon: '📄',
+      actionIcon: <FileText className="h-3 w-3" />,
       description: `Client deposited funds. Review agreement terms and accept to begin work.`,
     };
   }
@@ -53,7 +54,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'urgent',
       actionLabel: 'Sign Approved Agreement',
-      actionIcon: '✍️',
+      actionIcon: <PenTool className="h-3 w-3" />,
       description: `Client approved your terms ($${escrow.totalAmount} USDC)! Review and sign agreement to begin work.`,
     };
   }
@@ -63,7 +64,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'waiting',
       actionLabel: 'Awaiting Freelancer Signature',
-      actionIcon: '⏳',
+      actionIcon: <Clock className="h-3 w-3" />,
       description: `You approved terms ($${escrow.totalAmount} USDC). Waiting for Lead Freelancer final acceptance.`,
     };
   }
@@ -73,7 +74,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'waiting',
       actionLabel: 'Proposal Pending',
-      actionIcon: '⏳',
+      actionIcon: <Clock className="h-3 w-3" />,
       description: `Counter-offer ($${escrow.totalAmount} USDC) submitted. Waiting for Client decision.`,
     };
   }
@@ -83,7 +84,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'urgent',
       actionLabel: 'Review Counter-Offer',
-      actionIcon: '💬',
+      actionIcon: <MessageSquare className="h-3 w-3" />,
       description: `Freelancer requested rate/terms adjustment: "${escrow.negotiationNotes || ''}"`,
     };
   }
@@ -93,7 +94,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'waiting',
       actionLabel: 'Awaiting Freelancer',
-      actionIcon: '⏳',
+      actionIcon: <Clock className="h-3 w-3" />,
       description: `Deposit locked. Waiting for Lead Freelancer to review and accept the agreement.`,
     };
   }
@@ -104,7 +105,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'urgent',
       actionLabel: 'Rework Requested',
-      actionIcon: '🔄',
+      actionIcon: <RotateCcw className="h-3 w-3" />,
       description: `Client requested revisions on your deliverable. Click to inspect comments and resubmit.`,
     };
   }
@@ -114,7 +115,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'urgent',
       actionLabel: 'Review & Approve',
-      actionIcon: '🔴',
+      actionIcon: <CheckCircle2 className="h-3 w-3 text-rose-500" />,
       description: `${escrow.freelancerName || 'Freelancer'} has submitted work. Click to review and release payment.`,
     };
   }
@@ -124,7 +125,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'urgent',
       actionLabel: 'Submit Deliverable',
-      actionIcon: '🟡',
+      actionIcon: <Upload className="h-3 w-3 text-amber-500" />,
       description: `Agreement locked. Work in progress — submit deliverable proof when ready.`,
     };
   }
@@ -134,7 +135,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'pending',
       actionLabel: 'Resolve Dispute',
-      actionIcon: '⚠️',
+      actionIcon: <AlertTriangle className="h-3 w-3" />,
       description: 'Dispute in progress. Both parties must agree to release funds.',
     };
   }
@@ -144,7 +145,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'waiting',
       actionLabel: 'Awaiting Delivery',
-      actionIcon: '⏳',
+      actionIcon: <Clock className="h-3 w-3" />,
       description: `Agreement locked. Waiting for ${escrow.freelancerName || 'freelancer'} to complete and submit work.`,
     };
   }
@@ -154,7 +155,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
       escrow,
       priority: 'waiting',
       actionLabel: 'Awaiting Client Approval',
-      actionIcon: '⏳',
+      actionIcon: <Clock className="h-3 w-3" />,
       description: 'Deliverable submitted. Waiting for client to review and release payment.',
     };
   }
@@ -163,8 +164,8 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
     return {
       escrow,
       priority: 'done',
-      actionLabel: status === STATUS_CODES.RELEASED ? 'Settled ✓' : 'Refunded ✓',
-      actionIcon: '✅',
+      actionLabel: status === STATUS_CODES.RELEASED ? 'Settled' : 'Refunded',
+      actionIcon: <Check className="h-3 w-3" />,
       description: status === STATUS_CODES.RELEASED ? 'Payment released to all recipients.' : 'Funds returned to client.',
     };
   }
@@ -173,7 +174,7 @@ function classifyAction(escrow: EscrowItem, userAddr: string): ActionCard | null
     escrow,
     priority: 'waiting',
     actionLabel: 'View',
-    actionIcon: '👁',
+    actionIcon: <Eye className="h-3 w-3" />,
     description: 'Monitor this escrow contract.',
   };
 }
@@ -224,9 +225,10 @@ export default function DashboardPage() {
                   key={i}
                   type="button"
                   onClick={() => { loginWithDemo(acc); router.refresh(); }}
-                  className="rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  className="rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  {i === 0 ? '💼' : '🎨'} {acc.name.split(' ')[0]}
+                  {i === 0 ? <Building2 className="h-3.5 w-3.5 text-blue-600" /> : <Code2 className="h-3.5 w-3.5 text-amber-600" />}
+                  <span>{acc.name.split(' ')[0]}</span>
                 </button>
               ))}
             </div>
@@ -287,8 +289,14 @@ export default function DashboardPage() {
                 <p className="text-blue-200 text-xs font-semibold">
                   Welcome back, {user.name.split(' ')[0]}
                 </p>
-                <span className="text-[10px] font-extrabold uppercase bg-white/20 text-white px-2 py-0.5 rounded-full">
-                  {user.role === 'client' ? '🏢 Client' : user.role === 'freelancer' ? '💻 Freelancer' : '👥 Team Member'}
+                <span className="text-[10px] font-extrabold uppercase bg-white/20 text-white px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                  {user.role === 'client' ? (
+                    <><Building2 className="h-2.5 w-2.5" /> Client</>
+                  ) : user.role === 'freelancer' ? (
+                    <><Code2 className="h-2.5 w-2.5" /> Freelancer</>
+                  ) : (
+                    <><Users className="h-2.5 w-2.5" /> Team Member</>
+                  )}
                 </span>
               </div>
               <h1 className="text-2xl font-extrabold text-white tracking-tight">
@@ -296,7 +304,7 @@ export default function DashboardPage() {
               </h1>
               <p className="text-blue-200 text-xs mt-1">
                 {urgentActions.length > 0
-                  ? `⚡ ${urgentActions.length} action${urgentActions.length > 1 ? 's' : ''} required — ${urgentActions.map(c => c.escrow.title.split(' ')[0]).join(', ')}`
+                  ? `${urgentActions.length} action${urgentActions.length > 1 ? 's' : ''} required — ${urgentActions.map(c => c.escrow.title.split(' ')[0]).join(', ')}`
                   : `No urgent actions · ${myEscrows.length} total contracts`}
               </p>
             </div>
@@ -309,8 +317,9 @@ export default function DashboardPage() {
                 <Plus className="h-4 w-4" /> Create New Escrow
               </Link>
             ) : (
-              <div className="flex items-center gap-2 rounded-2xl bg-white/10 border border-white/20 px-4 py-2.5 text-xs font-bold text-yellow-200 shadow-inner">
-                <span>💻 Freelancer Workspace</span>
+              <div className="flex items-center gap-1.5 rounded-2xl bg-white/10 border border-white/20 px-4 py-2.5 text-xs font-bold text-yellow-200 shadow-inner">
+                <Code2 className="h-3.5 w-3.5 text-yellow-300" />
+                <span>Freelancer Workspace</span>
               </div>
             )}
           </div>
@@ -378,81 +387,113 @@ export default function DashboardPage() {
               className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none shadow-sm"
             >
               <option value="all">All Status</option>
-              <option value="0">🔒 Locked</option>
-              <option value="1">📎 Delivered</option>
-              <option value="2">✅ Released</option>
-              <option value="3">↩ Refunded</option>
-              <option value="4">⚠ Disputed</option>
+              <option value="0">Locked</option>
+              <option value="1">Delivered</option>
+              <option value="2">Released</option>
+              <option value="3">Refunded</option>
+              <option value="4">Disputed</option>
             </select>
           </div>
         </div>
 
         {/* ── Search Results View ───────────────────────────── */}
         {isFiltering ? (
-          <div className="space-y-3">
-            <p className="text-xs text-slate-500 font-semibold">{searchFiltered.length} result{searchFiltered.length !== 1 ? 's' : ''}</p>
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-slate-700">
+                Search Results ({searchFiltered.length})
+              </h2>
+              <button
+                onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800"
+              >
+                Clear Filters
+              </button>
+            </div>
             {searchFiltered.length === 0 ? (
               <EmptyState user={user} />
             ) : (
-              searchFiltered.map(escrow => <EscrowCard key={escrow.id} escrow={escrow} />)
+              <div className="space-y-3">
+                {searchFiltered.map(escrow => (
+                  <EscrowCard key={escrow.id} escrow={escrow} />
+                ))}
+              </div>
             )}
           </div>
         ) : (
-          <>
-            {/* ── Action Inbox View ─────────────────────────── */}
-            {myEscrows.length === 0 ? (
-              <EmptyState user={user} />
-            ) : (
-              <>
-                {/* Urgent Actions */}
-                {urgentActions.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-red-500" />
-                      <h2 className="text-sm font-extrabold text-slate-900">Action Required</h2>
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold text-red-700 border border-red-200">
-                        {urgentActions.length}
-                      </span>
-                    </div>
-                    {urgentActions.map(c => <ActionInboxCard key={c.escrow.id} card={c} />)}
-                  </div>
-                )}
-
-                {/* Waiting / Pending */}
-                {activeActions.filter(c => c.priority !== 'urgent').length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-blue-500" />
-                      <h2 className="text-sm font-extrabold text-slate-900">In Progress</h2>
-                    </div>
-                    {activeActions.filter(c => c.priority !== 'urgent').map(c => <ActionInboxCard key={c.escrow.id} card={c} />)}
-                  </div>
-                )}
-
-                {/* Archive (collapsed by default) */}
-                {archiveActions.length > 0 && (
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => setShowArchive(!showArchive)}
-                      className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors"
-                    >
-                      {showArchive ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      Completed / Archive ({archiveActions.length})
-                    </button>
-                    {showArchive && archiveActions.map(c => <ActionInboxCard key={c.escrow.id} card={c} />)}
-                  </div>
-                )}
-              </>
+          /* ── Action-Oriented Inbox View ─────────────────── */
+          <div className="space-y-8">
+            {/* Urgent / Needs Attention */}
+            {urgentActions.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                  <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide">
+                    Needs Your Action ({urgentActions.length})
+                  </h2>
+                  <span className="text-[11px] text-slate-400 font-medium">— Pending your review or input</span>
+                </div>
+                <div className="space-y-3">
+                  {urgentActions.map(card => (
+                    <ActionCardRow key={card.escrow.id} card={card} />
+                  ))}
+                </div>
+              </section>
             )}
-          </>
+
+            {/* Waiting on Other Party / In Progress */}
+            {activeActions.filter(c => c.priority !== 'urgent').length > 0 && (
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-2 w-2 rounded-full bg-amber-400" />
+                  <h2 className="text-sm font-extrabold text-slate-700 uppercase tracking-wide">
+                    In Progress &amp; Waiting ({activeActions.filter(c => c.priority !== 'urgent').length})
+                  </h2>
+                  <span className="text-[11px] text-slate-400 font-medium">— Waiting on other party</span>
+                </div>
+                <div className="space-y-3">
+                  {activeActions
+                    .filter(c => c.priority !== 'urgent')
+                    .map(card => (
+                      <ActionCardRow key={card.escrow.id} card={card} />
+                    ))}
+                </div>
+              </section>
+            )}
+
+            {/* Empty Inbox */}
+            {activeActions.length === 0 && archiveActions.length === 0 && (
+              <EmptyState user={user} />
+            )}
+
+            {/* Settled / Completed Archive */}
+            {archiveActions.length > 0 && (
+              <section>
+                <button
+                  onClick={() => setShowArchive(!showArchive)}
+                  className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-colors mb-3"
+                >
+                  {showArchive ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  Settled / Completed Contracts ({archiveActions.length})
+                </button>
+                {showArchive && (
+                  <div className="space-y-3">
+                    {archiveActions.map(card => (
+                      <ActionCardRow key={card.escrow.id} card={card} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-// ── Action Inbox Card (role-aware) ─────────────────────────────────────────
-function ActionInboxCard({ card }: { card: ActionCard }) {
+// ── Action Card Row ───────────────────────────────────────────────────────
+function ActionCardRow({ card }: { card: ActionCard }) {
   const styles = PRIORITY_STYLES[card.priority];
   return (
     <Link
@@ -463,13 +504,14 @@ function ActionInboxCard({ card }: { card: ActionCard }) {
         {/* Left */}
         <div className="space-y-1.5 flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${styles.badge}`}>
-              {card.actionIcon} {card.actionLabel}
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${styles.badge} inline-flex items-center gap-1`}>
+              {card.actionIcon}
+              <span>{card.actionLabel}</span>
             </span>
             <StatusBadge status={card.escrow.status} />
             {card.escrow.isOnChain && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700">
-                🔗 On-Chain
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700 inline-flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3" /> On-Chain
               </span>
             )}
           </div>
@@ -478,9 +520,15 @@ function ActionInboxCard({ card }: { card: ActionCard }) {
           </h3>
           <p className="text-xs text-slate-500 leading-relaxed">{card.description}</p>
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-0.5">
-            <span>💼 <strong className="text-slate-700">{card.escrow.clientName || formatAddress(card.escrow.client, 4)}</strong></span>
+            <span className="inline-flex items-center gap-1">
+              <Building2 className="h-3 w-3 text-slate-400" />
+              <strong className="text-slate-700">{card.escrow.clientName || formatAddress(card.escrow.client, 4)}</strong>
+            </span>
             <span>·</span>
-            <span>🎨 <strong className="text-slate-700">{card.escrow.freelancerName || formatAddress(card.escrow.leadFreelancer, 4)}</strong></span>
+            <span className="inline-flex items-center gap-1">
+              <Code2 className="h-3 w-3 text-slate-400" />
+              <strong className="text-slate-700">{card.escrow.freelancerName || formatAddress(card.escrow.leadFreelancer, 4)}</strong>
+            </span>
             <span>·</span>
             <span>{formatDate(card.escrow.createdAt)}</span>
           </div>
@@ -517,13 +565,21 @@ function EscrowCard({ escrow }: { escrow: EscrowItem }) {
             <h3 className="text-sm font-extrabold text-slate-900 truncate hover:text-blue-600 transition-colors">{escrow.title}</h3>
             <StatusBadge status={escrow.status} />
             {escrow.isOnChain && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700">🔗 On-Chain</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700 inline-flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3" /> On-Chain
+              </span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-            <span>💼 <strong className="text-slate-800">{escrow.clientName || formatAddress(escrow.client, 4)}</strong></span>
+            <span className="inline-flex items-center gap-1">
+              <Building2 className="h-3 w-3 text-slate-400" />
+              <strong className="text-slate-800">{escrow.clientName || formatAddress(escrow.client, 4)}</strong>
+            </span>
             <span>·</span>
-            <span>🎨 <strong className="text-slate-800">{escrow.freelancerName || formatAddress(escrow.leadFreelancer, 4)}</strong></span>
+            <span className="inline-flex items-center gap-1">
+              <Code2 className="h-3 w-3 text-slate-400" />
+              <strong className="text-slate-800">{escrow.freelancerName || formatAddress(escrow.leadFreelancer, 4)}</strong>
+            </span>
             <span>·</span>
             <span>{formatDate(escrow.createdAt)}</span>
           </div>

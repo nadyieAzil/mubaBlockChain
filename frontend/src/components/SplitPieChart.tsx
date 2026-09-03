@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { Check, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface Slice {
   label: string;
@@ -101,7 +102,9 @@ export const SplitPieChart: React.FC<SplitPieChartProps> = ({ slices, totalAmoun
           )}
         </svg>
         {totalValid && (
-          <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[10px] font-extrabold">✓</div>
+          <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-xs">
+            <Check className="h-3 w-3" />
+          </div>
         )}
       </div>
 
@@ -123,13 +126,15 @@ export const SplitPieChart: React.FC<SplitPieChartProps> = ({ slices, totalAmoun
 
       {/* Validation */}
       {total > 0 && total !== 10000 && (
-        <div className="text-xs font-bold text-rose-600 bg-rose-50 rounded-lg px-3 py-1.5 w-full text-center">
-          ⚠ Total must equal 100% (10000 bps). Current: {(total / 100).toFixed(1)}%
+        <div className="text-xs font-bold text-rose-600 bg-rose-50 rounded-lg px-3 py-1.5 w-full flex items-center justify-center gap-1.5">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>Total must equal 100% (10000 bps). Current: {(total / 100).toFixed(1)}%</span>
         </div>
       )}
       {totalValid && (
-        <div className="text-xs font-bold text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1.5 w-full text-center">
-          ✓ Split is valid — exactly 100% allocated
+        <div className="text-xs font-bold text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1.5 w-full flex items-center justify-center gap-1.5">
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+          <span>Split is valid — exactly 100% allocated</span>
         </div>
       )}
     </div>
