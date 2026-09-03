@@ -1064,38 +1064,82 @@ export default function EscrowDetailPage() {
                   </div>
                 </div>
 
-                {/* Dual Resolution Signatures & Actions */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                  <div className="text-xs space-y-1">
-                    <div className="font-bold text-slate-700">Dual Consent Signatures Required to Disburse Funds:</div>
-                    <div className="flex items-center gap-3 text-[11px]">
-                      <span className={`inline-flex items-center gap-1 font-bold ${escrow.clientAgrees ? 'text-emerald-700' : 'text-amber-700'}`}>
-                        {escrow.clientAgrees ? '✓ Client: Agreed' : '⏳ Client: Pending Signature'}
-                      </span>
-                      <span className="text-slate-300">|</span>
-                      <span className={`inline-flex items-center gap-1 font-bold ${escrow.freelancerAgrees ? 'text-emerald-700' : 'text-amber-700'}`}>
-                        {escrow.freelancerAgrees ? '✓ Lead Freelancer: Agreed' : '⏳ Lead Freelancer: Pending Signature'}
-                      </span>
+                {/* Dual Resolution Signatures & Role Actions */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="space-y-1">
+                      <div className="font-bold text-slate-700">Dual Consent Status:</div>
+                      <div className="flex items-center gap-3 text-[11px]">
+                        <span className={`inline-flex items-center gap-1 font-bold ${escrow.clientAgrees ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {escrow.clientAgrees ? '✓ Client: Approved' : '⏳ Client: Pending Confirmation'}
+                        </span>
+                        <span className="text-slate-300">|</span>
+                        <span className={`inline-flex items-center gap-1 font-bold ${escrow.freelancerAgrees ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {escrow.freelancerAgrees ? '✓ Lead Freelancer: Accepted' : '⏳ Lead Freelancer: Pending Acceptance'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {(isClient || isFreelancer) && (
+                  {/* Role-Specific Action Triggers */}
+                  {isClient && (
                     <div>
-                      {((isClient && escrow.clientAgrees) || (isFreelancer && escrow.freelancerAgrees)) ? (
-                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 text-emerald-800 px-4 py-2.5 text-xs font-extrabold border border-emerald-300">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          <span>You Signed — Awaiting Other Party</span>
+                      {escrow.freelancerAgrees && !escrow.clientAgrees ? (
+                        <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50/90 p-4 space-y-2.5 animate-fade-in shadow-xs">
+                          <div className="flex items-center gap-2 font-extrabold text-emerald-950 text-xs">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            <span>Freelancer Accepted 75% AI Settlement — Client Confirmation Required</span>
+                          </div>
+                          <p className="text-[11px] text-emerald-900 leading-relaxed">
+                            Lead Freelancer has accepted the 75% compromise ($${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC). As the Client, please confirm and release the dispute payout below. You will immediately receive a <strong>25% ($${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC) refund</strong> credited back to your wallet.
+                          </p>
+                          <button
+                            onClick={handleAgreeResolution}
+                            disabled={loadingAction === 'agree'}
+                            className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-2.5 text-xs shadow-md transition-all cursor-pointer"
+                          >
+                            <Zap className="h-4 w-4 text-yellow-300" />
+                            <span>Confirm &amp; Release Dispute Payout (Claim ${((escrow.totalAmount * 25) / 100).toFixed(2)} Refund)</span>
+                          </button>
+                        </div>
+                      ) : escrow.clientAgrees && !escrow.freelancerAgrees ? (
+                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-blue-100 text-blue-900 px-4 py-2.5 text-xs font-extrabold border border-blue-300">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                          <span>✓ You Pre-Approved 25% Refund — Awaiting Lead Freelancer Acceptance</span>
                         </div>
                       ) : (
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs text-slate-500 italic">Awaiting Freelancer to review and accept 75% terms, or you can pre-approve:</span>
+                          <button
+                            onClick={handleAgreeResolution}
+                            disabled={loadingAction === 'agree'}
+                            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition-all cursor-pointer"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>Pre-Approve 25% Refund Settlement</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {isFreelancer && (
+                    <div>
+                      {escrow.freelancerAgrees && !escrow.clientAgrees ? (
+                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 text-emerald-900 px-4 py-2.5 text-xs font-extrabold border border-emerald-300">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          <span>✓ You Accepted 75% Settlement — Awaiting Client's Final Approval &amp; Release</span>
+                        </div>
+                      ) : !escrow.freelancerAgrees ? (
                         <button
                           onClick={handleAgreeResolution}
                           disabled={loadingAction === 'agree'}
                           className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all cursor-pointer"
                         >
                           <CheckCircle2 className="h-4 w-4" />
-                          <span>Accept AI Settlement ({isClient ? '25% Refund' : '75% Payout'})</span>
+                          <span>Accept AI Settlement Terms (75% Team Pool: ${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC)</span>
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   )}
                 </div>

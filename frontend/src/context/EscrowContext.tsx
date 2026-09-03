@@ -765,8 +765,10 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         };
 
         const txAction = bothAgree
-          ? `AI Mutual Settlement Finalized: ${freelancerPct}% ($${freelancerAmount.toFixed(2)} USDC) split to team, ${clientRefundPct}% ($${clientRefundAmount.toFixed(2)} USDC) refunded to Client`
-          : `Mutual Resolution Signed by ${isClient ? 'Client' : 'Freelancer'} (Awaiting Counter-Signature)`;
+          ? `Dispute Settlement Approved & Released by Client: ${freelancerPct}% ($${freelancerAmount.toFixed(2)} USDC) split to team, ${clientRefundPct}% ($${clientRefundAmount.toFixed(2)} USDC) refunded to Client`
+          : isFreelancer
+          ? `AI Settlement Terms Accepted by Lead Freelancer (Awaiting Client Final Approval & Release)`
+          : `Dispute Settlement Pre-Approved by Client (Awaiting Freelancer Acceptance)`;
 
         return {
           ...e,
