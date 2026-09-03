@@ -302,8 +302,14 @@ export default function EscrowDetailPage() {
   const handleAgreeResolution = async () => {
     setLoadingAction('agree');
     try {
+      const willBothAgree = isClient ? escrow.freelancerAgrees : escrow.clientAgrees;
       await agreeToRelease(escrow.id);
-      setSuccessMessage('Your resolution agreement has been signed on Sui.');
+      if (willBothAgree) {
+        setShowPTBVisualizer(true);
+        setSuccessMessage('AI dispute settlement mutually signed & finalized! 75% payout distributed to team, 25% refunded to Client.');
+      } else {
+        setSuccessMessage('Your dispute resolution agreement signature has been recorded. Awaiting counter-signature from the other party.');
+      }
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to sign resolution.');
     } finally {
@@ -317,11 +323,26 @@ export default function EscrowDetailPage() {
       {showPTBVisualizer && (
         <PTBFlowVisualizer
           totalAmount={escrow.totalAmount}
-          recipients={escrow.recipients.map((r) => ({
-            name: r.name,
-            payout: (escrow.totalAmount * r.percentageBasisPoints) / 10000,
-            address: r.recipient,
-          }))}
+          recipients={
+            escrow.disputeVerdict
+              ? [
+                  {
+                    name: `${escrow.clientName || 'Client'} (25% Dispute Refund)`,
+                    payout: escrow.disputeVerdict.clientRefundAmount,
+                    address: escrow.client,
+                  },
+                  ...escrow.recipients.map((r) => ({
+                    name: r.name,
+                    payout: (escrow.disputeVerdict!.freelancerAmount * r.percentageBasisPoints) / 10000,
+                    address: r.recipient,
+                  })),
+                ]
+              : escrow.recipients.map((r) => ({
+                  name: r.name,
+                  payout: (escrow.totalAmount * r.percentageBasisPoints) / 10000,
+                  address: r.recipient,
+                }))
+          }
           onComplete={handlePTBComplete}
         />
       )}
@@ -407,7 +428,13 @@ export default function EscrowDetailPage() {
               <div className="text-left md:text-right shrink-0">
                 <div className="text-[10px] font-bold text-slate-400 uppercase">Total Escrow Value</div>
                 <div className="text-3xl font-extrabold text-slate-900">{formatUSDC(escrow.totalAmount)}</div>
-                <div className="text-[11px] font-bold text-emerald-600">$0.00 Gas Sponsored</div>
+                {escrow.disputeVerdict?.isSettled ? (
+                  <div className="text-[10px] font-extrabold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full inline-block mt-1">
+                    ⚖️ Settled: 75% Team / 25% Refund
+                  </div>
+                ) : (
+                  <div className="text-[11px] font-bold text-emerald-600">$0.00 Gas Sponsored</div>
+                )}
               </div>
             </div>
           </div>
@@ -992,52 +1019,143 @@ export default function EscrowDetailPage() {
 
             {/* ── Hybrid AI Dispute Resolution View ── */}
             {escrow.status === STATUS_CODES.DISPUTED && (
-              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/50 p-6 space-y-4 shadow-sm">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-9 w-9 rounded-xl bg-amber-600 text-white flex items-center justify-center">
-                    <Bot className="h-5 w-5" />
+              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/70 p-6 space-y-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-9 w-9 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
+                      <Bot className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold text-slate-900">SuiPact AI Dispute Mediator</h3>
+                      <p className="text-xs text-amber-800">Unbiased analysis of contract specifications vs delivered artifact</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-900">SuiPact AI Dispute Mediator</h3>
-                    <p className="text-xs text-amber-800">Unbiased analysis of contract specifications vs delivered artifact</p>
-                  </div>
+                  <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-200 text-amber-900 border border-amber-300">
+                    Dual Consensus Required
+                  </span>
                 </div>
 
-                <div className="rounded-xl border border-amber-200 bg-white p-4 space-y-2 text-xs">
+                <div className="rounded-xl border border-amber-200 bg-white p-4 space-y-3 text-xs shadow-xs">
                   <div className="font-bold text-slate-900 flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-purple-600" />
-                    AI Recommended Settlement Verdict:
+                    <span>AI Recommended Settlement Verdict:</span>
                   </div>
-                  <p className="text-slate-600 leading-relaxed">
-                    Based on deliverable artifacts and scope criteria, the project has achieved approximately <strong>75% completion</strong>. Recommended fair compromise: <strong>75% payout to Lead Freelancer team</strong> and <strong>25% refund to Client</strong>.
+                  <p className="text-slate-700 leading-relaxed">
+                    Based on deliverable artifacts and scope criteria, the project has achieved approximately <strong className="text-amber-800">75% completion</strong>. Recommended fair compromise: <strong className="text-emerald-700 font-extrabold">75% (${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC) payout to Lead Freelancer team</strong> and <strong className="text-blue-700 font-extrabold">25% (${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC) refund to Client</strong>.
                   </p>
+
+                  {/* Dynamic Financial Split Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-[11px]">
+                    <div className="rounded-lg bg-blue-50/80 border border-blue-200 p-2.5 space-y-0.5">
+                      <div className="font-bold text-blue-900 flex items-center justify-between">
+                        <span>Client Partial Refund (25%):</span>
+                        <span className="font-mono text-xs font-extrabold text-blue-800">+${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC</span>
+                      </div>
+                      <p className="text-[10px] text-blue-600">Will be returned immediately to Client wallet upon dual consent.</p>
+                    </div>
+
+                    <div className="rounded-lg bg-emerald-50/80 border border-emerald-200 p-2.5 space-y-0.5">
+                      <div className="font-bold text-emerald-900 flex items-center justify-between">
+                        <span>Freelancer Team Pool (75%):</span>
+                        <span className="font-mono text-xs font-extrabold text-emerald-800">+${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC</span>
+                      </div>
+                      <p className="text-[10px] text-emerald-600">Will be split atomically across all team recipients.</p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Dual Resolution Actions */}
+                {/* Dual Resolution Signatures & Actions */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                  <div className="text-xs text-slate-600">
-                    Dual signatures required to unlock. Status: Client: {escrow.clientAgrees ? '✓ Agreed' : '⏳ Pending'} | Freelancer: {escrow.freelancerAgrees ? '✓ Agreed' : '⏳ Pending'}
+                  <div className="text-xs space-y-1">
+                    <div className="font-bold text-slate-700">Dual Consent Signatures Required to Disburse Funds:</div>
+                    <div className="flex items-center gap-3 text-[11px]">
+                      <span className={`inline-flex items-center gap-1 font-bold ${escrow.clientAgrees ? 'text-emerald-700' : 'text-amber-700'}`}>
+                        {escrow.clientAgrees ? '✓ Client: Agreed' : '⏳ Client: Pending Signature'}
+                      </span>
+                      <span className="text-slate-300">|</span>
+                      <span className={`inline-flex items-center gap-1 font-bold ${escrow.freelancerAgrees ? 'text-emerald-700' : 'text-amber-700'}`}>
+                        {escrow.freelancerAgrees ? '✓ Lead Freelancer: Agreed' : '⏳ Lead Freelancer: Pending Signature'}
+                      </span>
+                    </div>
                   </div>
 
                   {(isClient || isFreelancer) && (
-                    <button
-                      onClick={handleAgreeResolution}
-                      disabled={loadingAction === 'agree'}
-                      className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all"
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Accept AI Settlement & Unlock Escrow</span>
-                    </button>
+                    <div>
+                      {((isClient && escrow.clientAgrees) || (isFreelancer && escrow.freelancerAgrees)) ? (
+                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 text-emerald-800 px-4 py-2.5 text-xs font-extrabold border border-emerald-300">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          <span>You Signed — Awaiting Other Party</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleAgreeResolution}
+                          disabled={loadingAction === 'agree'}
+                          className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all cursor-pointer"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Accept AI Settlement ({isClient ? '25% Refund' : '75% Payout'})</span>
+                        </button>
+                      )}
+                    </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Settled Dispute Resolution Banner ── */}
+            {escrow.disputeVerdict?.isSettled && (
+              <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50/70 p-5 space-y-3 shadow-sm animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold text-emerald-950">
+                        Dispute Resolved via Mutual AI Compromise Settlement
+                      </h3>
+                      <p className="text-xs text-emerald-800">
+                        Both parties consented to the AI mediator terms. Funds were atomically disbursed: 75% to Freelancer team and 25% refunded to Client.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-extrabold bg-emerald-200 text-emerald-900 px-2.5 py-1 rounded-full uppercase tracking-wider border border-emerald-300">
+                    Settled &amp; Disbursed
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
+                  <div className="rounded-xl bg-white border border-emerald-200 p-3 space-y-1 shadow-xs">
+                    <span className="font-bold text-slate-500 uppercase text-[10px]">Client Refund ({escrow.disputeVerdict.clientRefundPct}%):</span>
+                    <div className="text-base font-extrabold text-blue-700 font-mono">
+                      +${escrow.disputeVerdict.clientRefundAmount.toFixed(2)} USDC
+                    </div>
+                    <p className="text-[10px] text-slate-500">Credited back to {escrow.clientName || 'Client'}'s wallet balance</p>
+                  </div>
+
+                  <div className="rounded-xl bg-white border border-emerald-200 p-3 space-y-1 shadow-xs">
+                    <span className="font-bold text-slate-500 uppercase text-[10px]">Freelancer Team Pool ({escrow.disputeVerdict.freelancerPct}%):</span>
+                    <div className="text-base font-extrabold text-emerald-700 font-mono">
+                      +${escrow.disputeVerdict.freelancerAmount.toFixed(2)} USDC
+                    </div>
+                    <p className="text-[10px] text-slate-500">Atomically split across {escrow.recipients.length} team members</p>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Team Split Table */}
             <div className="space-y-3 pt-2">
-              <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                <Users className="h-4 w-4 text-blue-600" />
-                Atomic Team Split Allocation
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-600" />
+                  Atomic Team Split Allocation
+                </span>
+                {escrow.disputeVerdict?.isSettled && (
+                  <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-extrabold">
+                    Showing Adjusted Dispute Settlement Payouts (75%)
+                  </span>
+                )}
               </h4>
               <div className="overflow-x-auto rounded-xl border border-slate-200">
                 <table className="w-full text-left text-xs">
@@ -1052,7 +1170,11 @@ export default function EscrowDetailPage() {
                   <tbody className="divide-y divide-slate-100">
                     {escrow.recipients.map((r, i) => {
                       const pct = (r.percentageBasisPoints / 100).toFixed(1);
-                      const payout = (escrow.totalAmount * r.percentageBasisPoints) / 10000;
+                      const basePayout = (escrow.totalAmount * r.percentageBasisPoints) / 10000;
+                      const isDisputeSettled = escrow.disputeVerdict?.isSettled;
+                      const finalPayout = isDisputeSettled
+                        ? (escrow.disputeVerdict!.freelancerAmount * r.percentageBasisPoints) / 10000
+                        : basePayout;
                       const isMe = userAddr === r.recipient?.toLowerCase();
 
                       return (
@@ -1066,11 +1188,40 @@ export default function EscrowDetailPage() {
                           </td>
                           <td className="p-3 font-mono text-[11px] text-slate-500">{formatAddress(r.recipient, 6)}</td>
                           <td className="p-3 text-center font-bold">{pct}%</td>
-                          <td className="p-3 text-right font-extrabold text-emerald-700">${payout.toFixed(2)}</td>
+                          <td className="p-3 text-right">
+                            <span className="font-extrabold text-emerald-700 font-mono text-sm">
+                              ${finalPayout.toFixed(2)}
+                            </span>
+                            {isDisputeSettled && (
+                              <span className="text-[9.5px] text-amber-700 font-medium block">
+                                (75% dispute of ${basePayout.toFixed(2)})
+                              </span>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
+                  {escrow.disputeVerdict?.isSettled && (
+                    <tfoot className="bg-slate-50 border-t border-slate-200 text-xs font-bold">
+                      <tr>
+                        <td colSpan={3} className="p-3 text-right uppercase text-slate-600">
+                          Team Settlement Pool (75%):
+                        </td>
+                        <td className="p-3 text-right font-mono text-emerald-700 font-extrabold">
+                          ${escrow.disputeVerdict.freelancerAmount.toFixed(2)}
+                        </td>
+                      </tr>
+                      <tr className="bg-blue-50/50 border-t border-blue-100 text-blue-900">
+                        <td colSpan={3} className="p-3 text-right uppercase text-slate-600">
+                          Client Partial Refund (25%):
+                        </td>
+                        <td className="p-3 text-right font-mono text-blue-700 font-extrabold">
+                          +${escrow.disputeVerdict.clientRefundAmount.toFixed(2)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
             </div>

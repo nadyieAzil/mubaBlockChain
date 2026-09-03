@@ -41,17 +41,22 @@ export const StatusTimeline: React.FC<TimelineProps> = ({ status, txHistory }) =
           ? '3. Deposit Refunded'
           : status === STATUS_CODES.DISPUTED
           ? '3. Dispute Resolution'
+          : txHistory.some((t) => t.action.toLowerCase().includes('settlement finalized'))
+          ? '3. AI Dispute Compromise Settled'
           : '3. Atomic Split Release',
       desc:
         status === STATUS_CODES.REFUNDED
           ? 'Client reclaimed locked funds'
           : status === STATUS_CODES.DISPUTED
           ? 'Mutual consensus or resolution required'
+          : txHistory.some((t) => t.action.toLowerCase().includes('settlement finalized'))
+          ? '75% compromise payout disbursed, 25% refunded to Client'
           : 'USDC disbursed to all team split recipients in 1 PTB',
       isCompleted: status === STATUS_CODES.RELEASED || status === STATUS_CODES.REFUNDED,
       isActive: status === STATUS_CODES.RELEASED || status === STATUS_CODES.DISPUTED,
       tx: txHistory.find(
         (t) =>
+          t.action.toLowerCase().includes('settlement') ||
           t.action.toLowerCase().includes('released') ||
           t.action.toLowerCase().includes('refunded') ||
           t.action.toLowerCase().includes('dispute')

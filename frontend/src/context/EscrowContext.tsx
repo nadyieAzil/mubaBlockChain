@@ -49,6 +49,15 @@ export interface EscrowItem {
   isRevisionRequested?: boolean;
   cancelledWithPenalty?: boolean;
   penaltyAmount?: number;
+  disputeVerdict?: {
+    freelancerPct: number;
+    clientRefundPct: number;
+    freelancerAmount: number;
+    clientRefundAmount: number;
+    summary?: string;
+    isSettled?: boolean;
+    settledAt?: string;
+  };
   txHistory: {
     action: string;
     digest: string;
@@ -527,17 +536,30 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       digest = '2rRelease' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join('');
     }
 
-    // Atomically credit each team recipient's live wallet balance
-    target.recipients.forEach(r => {
-      const payout = (target.totalAmount * r.percentageBasisPoints) / 10000;
-      creditBalance(payout, r.recipient);
-    });
+    // Atomically credit each team recipient's live wallet balance (honoring dispute compromise if applicable)
+    const verdict = target.disputeVerdict;
+    if (verdict && verdict.freelancerPct && !verdict.isSettled) {
+      const clientRefund = verdict.clientRefundAmount || (target.totalAmount * verdict.clientRefundPct) / 100;
+      const freelancerPool = verdict.freelancerAmount || (target.totalAmount * verdict.freelancerPct) / 100;
+
+      creditBalance(clientRefund, target.client);
+      target.recipients.forEach(r => {
+        const payout = (freelancerPool * r.percentageBasisPoints) / 10000;
+        creditBalance(payout, r.recipient);
+      });
+    } else if (!verdict?.isSettled) {
+      target.recipients.forEach(r => {
+        const payout = (target.totalAmount * r.percentageBasisPoints) / 10000;
+        creditBalance(payout, r.recipient);
+      });
+    }
 
     const updated = escrows.map(e => {
       if (e.id === escrowId) {
         return {
           ...e,
           status: STATUS_CODES.RELEASED,
+          disputeVerdict: e.disputeVerdict ? { ...e.disputeVerdict, isSettled: true, settledAt: new Date().toISOString() } : undefined,
           txHistory: [...e.txHistory, { action: 'Atomic Split Payout Released', digest, timestamp: new Date().toISOString(), isReal }],
         };
       }
@@ -654,6 +676,11 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       digest = '1dDispute' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join('');
     }
 
+    const freelancerPct = 75;
+    const clientRefundPct = 25;
+    const freelancerAmount = (target.totalAmount * freelancerPct) / 100;
+    const clientRefundAmount = (target.totalAmount * clientRefundPct) / 100;
+
     const updated = escrows.map(e => {
       if (e.id === escrowId) {
         return {
@@ -661,6 +688,14 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           status: STATUS_CODES.DISPUTED,
           clientAgrees: false,
           freelancerAgrees: false,
+          disputeVerdict: {
+            freelancerPct,
+            clientRefundPct,
+            freelancerAmount,
+            clientRefundAmount,
+            summary: `Based on deliverable artifacts and scope criteria, the project has achieved approximately ${freelancerPct}% completion. Recommended fair compromise: ${freelancerPct}% ($${freelancerAmount.toFixed(2)} USDC) payout to Lead Freelancer team and ${clientRefundPct}% ($${clientRefundAmount.toFixed(2)} USDC) refund to Client.`,
+            isSettled: false,
+          },
           txHistory: [...e.txHistory, { action: 'Formal Dispute Raised on Escrow', digest, timestamp: new Date().toISOString(), isReal }],
         };
       }
@@ -695,21 +730,54 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       digest = '3mMutual' + Array.from({ length: 32 }, () => 'abcdef0123456789'[Math.floor(Math.random() * 16)]).join('');
     }
 
+    // Determine dispute compromise amounts (Default to 75% Freelancer / 25% Client)
+    const freelancerPct = target.disputeVerdict?.freelancerPct ?? 75;
+    const clientRefundPct = target.disputeVerdict?.clientRefundPct ?? 25;
+    const freelancerAmount = target.disputeVerdict?.freelancerAmount ?? (target.totalAmount * freelancerPct) / 100;
+    const clientRefundAmount = target.disputeVerdict?.clientRefundAmount ?? (target.totalAmount * clientRefundPct) / 100;
+
     const updated = escrows.map(e => {
       if (e.id === escrowId) {
         const clientAgrees = isClient ? true : e.clientAgrees;
         const freelancerAgrees = isFreelancer ? true : e.freelancerAgrees;
         const bothAgree = clientAgrees && freelancerAgrees;
 
+        // When both parties agree, atomically disburse the compromise payout immediately!
+        if (bothAgree) {
+          // 1. Credit 25% refund back to Client's wallet balance
+          creditBalance(clientRefundAmount, target.client);
+
+          // 2. Atomically credit 75% split to team recipients' live wallets
+          target.recipients.forEach(r => {
+            const payout = (freelancerAmount * r.percentageBasisPoints) / 10000;
+            creditBalance(payout, r.recipient);
+          });
+        }
+
+        const newVerdict = {
+          freelancerPct,
+          clientRefundPct,
+          freelancerAmount,
+          clientRefundAmount,
+          summary: `Based on deliverable artifacts and scope criteria, the project has achieved approximately ${freelancerPct}% completion. Recommended fair compromise: ${freelancerPct}% ($${freelancerAmount.toFixed(2)} USDC) payout to Lead Freelancer team and ${clientRefundPct}% ($${clientRefundAmount.toFixed(2)} USDC) refund to Client.`,
+          isSettled: bothAgree ? true : (e.disputeVerdict?.isSettled || false),
+          settledAt: bothAgree ? new Date().toISOString() : e.disputeVerdict?.settledAt,
+        };
+
+        const txAction = bothAgree
+          ? `AI Mutual Settlement Finalized: ${freelancerPct}% ($${freelancerAmount.toFixed(2)} USDC) split to team, ${clientRefundPct}% ($${clientRefundAmount.toFixed(2)} USDC) refunded to Client`
+          : `Mutual Resolution Signed by ${isClient ? 'Client' : 'Freelancer'} (Awaiting Counter-Signature)`;
+
         return {
           ...e,
           clientAgrees,
           freelancerAgrees,
-          status: bothAgree ? STATUS_CODES.DELIVERED : STATUS_CODES.DISPUTED,
+          status: bothAgree ? STATUS_CODES.RELEASED : STATUS_CODES.DISPUTED,
+          disputeVerdict: newVerdict,
           txHistory: [
             ...e.txHistory,
             {
-              action: `Mutual Resolution Signed by ${isClient ? 'Client' : 'Freelancer'}${bothAgree ? ' (Dispute Resolved & Unlocked)' : ''}`,
+              action: txAction,
               digest,
               timestamp: new Date().toISOString(),
               isReal,
