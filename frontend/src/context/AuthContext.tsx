@@ -179,15 +179,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRegisteredUsers(updatedRegistry);
     localStorage.setItem('suipact_registered_users_v2', JSON.stringify(updatedRegistry));
 
-    // Initialize starting balance (Client gets $2,500 USDC testnet, Freelancer gets $250 USDC)
-    const startingBalance = role === 'client' ? 2500 : 250;
+    // Initialize starting balance for newly registered accounts to $0.00 USDC
+    const startingBalance = 0;
     const updatedBalances = { ...balances, [derivedAddress]: startingBalance };
     saveBalances(updatedBalances);
 
     setUser(newUser);
     localStorage.setItem('suipact_user_session', JSON.stringify(newUser));
     setIsLoginModalOpen(false);
-    showNotification(`Account created! Welcome, ${displayName} (${role.toUpperCase()})`);
+    showNotification(`Account created! Welcome, ${displayName} (${role.toUpperCase()}) — Wallet Balance: $0.00 USDC`);
     return newUser;
   };
 
@@ -242,9 +242,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetDemoState = () => {
     localStorage.removeItem('suipact_wallet_balances_v2');
     localStorage.removeItem('suipact_escrows_v3');
-    setBalances(DEFAULT_INITIAL_BALANCES);
-    localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(DEFAULT_INITIAL_BALANCES));
-    showNotification('🔄 Demo wallet balances and state reset to initial pristine values!');
+    
+    // If current logged-in user is a custom account (not demo persona), set their balance to 0
+    const userAddr = user?.address?.toLowerCase();
+    const initialForCustom = userAddr && !DEFAULT_INITIAL_BALANCES[userAddr] ? { [userAddr]: 0 } : {};
+    const finalResetBalances = { ...DEFAULT_INITIAL_BALANCES, ...initialForCustom };
+
+    setBalances(finalResetBalances);
+    localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(finalResetBalances));
+    showNotification('🔄 Demo wallet balances and state reset to initial pristine values (Custom user: $0.00 USDC)!');
   };
 
   const deductBalance = (amount: number, address?: string) => {
@@ -297,7 +303,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const userAddrClean = user?.address?.toLowerCase() || '';
   const activeBalance = user
-    ? (balances[userAddrClean] ?? DEFAULT_INITIAL_BALANCES[userAddrClean] ?? (user.role === 'client' ? 2500 : 250))
+    ? (balances[userAddrClean] ?? DEFAULT_INITIAL_BALANCES[userAddrClean] ?? 0)
     : 0;
 
   return (
