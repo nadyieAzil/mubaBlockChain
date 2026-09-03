@@ -88,6 +88,7 @@ export default function EscrowDetailPage() {
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [showReleaseConfirmModal, setShowReleaseConfirmModal] = useState(false);
   const [showDisputeConfirmModal, setShowDisputeConfirmModal] = useState(false);
+  const [showRaiseDisputeModal, setShowRaiseDisputeModal] = useState(false);
   const [showReworkInput, setShowReworkInput] = useState(false);
   const [reworkComment, setReworkComment] = useState('');
   const [showPenaltyCancelModal, setShowPenaltyCancelModal] = useState(false);
@@ -931,11 +932,11 @@ export default function EscrowDetailPage() {
                         <span>Request Rework</span>
                       </button>
 
-                      {/* Raise Dispute Button */}
+                      {/* Raise Dispute Button (Triggers Confirmation Modal) */}
                       <button
-                        onClick={handleRaiseDispute}
+                        onClick={() => setShowRaiseDisputeModal(true)}
                         disabled={loadingAction === 'dispute'}
-                        className="flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 px-3.5 py-2.5 text-xs font-bold text-rose-700 transition-all"
+                        className="flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 px-3.5 py-2.5 text-xs font-bold text-rose-700 transition-all cursor-pointer"
                       >
                         <AlertTriangle className="h-3.5 w-3.5" />
                         <span>Raise Dispute</span>
@@ -1084,65 +1085,27 @@ export default function EscrowDetailPage() {
 
                   {/* Role-Specific Action Triggers */}
                   {isClient && (
-                    <div>
-                      {escrow.freelancerAgrees && !escrow.clientAgrees ? (
-                        <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50/90 p-4 space-y-2.5 animate-fade-in shadow-xs">
-                          <div className="flex items-center gap-2 font-extrabold text-emerald-950 text-xs">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                            <span>Freelancer Accepted 75% AI Settlement — Client Confirmation Required</span>
-                          </div>
-                          <p className="text-[11px] text-emerald-900 leading-relaxed">
-                            Lead Freelancer has accepted the 75% compromise ($${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC). As the Client, please confirm and release the dispute payout below. You will immediately receive a <strong>25% ($${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC) refund</strong> credited back to your wallet.
-                          </p>
-                          <button
-                            onClick={handleAgreeResolution}
-                            disabled={loadingAction === 'agree'}
-                            className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-2.5 text-xs shadow-md transition-all cursor-pointer"
-                          >
-                            <Zap className="h-4 w-4 text-yellow-300" />
-                            <span>Confirm &amp; Release Dispute Payout (Claim ${((escrow.totalAmount * 25) / 100).toFixed(2)} Refund)</span>
-                          </button>
-                        </div>
-                      ) : escrow.clientAgrees && !escrow.freelancerAgrees ? (
-                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-blue-100 text-blue-900 px-4 py-2.5 text-xs font-extrabold border border-blue-300">
-                          <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                          <span>✓ You Confirmed 25% Refund — Awaiting Lead Freelancer Acceptance</span>
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs text-slate-500 italic">Please review the 25% refund terms and confirm:</span>
-                          <button
-                            onClick={handleAgreeResolution}
-                            disabled={loadingAction === 'agree'}
-                            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition-all cursor-pointer"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            <span>Accept &amp; Confirm 25% Refund Settlement</span>
-                          </button>
-                        </div>
-                      )}
+                    <div className="rounded-xl bg-blue-50/90 border border-blue-200 p-3.5 space-y-1 animate-fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-blue-950">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                        <span>Client Pre-Authorized AI Resolution (25% Refund: +${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC)</span>
+                      </div>
+                      <p className="text-[11px] text-blue-700 pl-6">
+                        Awaiting Lead Freelancer to review and confirm the 75% settlement terms. Once confirmed, payouts and your refund will be automatically executed on Sui Testnet.
+                      </p>
                     </div>
                   )}
 
                   {isFreelancer && (
-                    <div>
-                      {escrow.freelancerAgrees && !escrow.clientAgrees ? (
-                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 text-emerald-900 px-4 py-2.5 text-xs font-extrabold border border-emerald-300">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          <span>✓ You Accepted 75% Settlement — Awaiting Client's Final Confirmation &amp; Release</span>
-                        </div>
-                      ) : !escrow.freelancerAgrees ? (
-                        <div className="pt-1">
-                          <button
-                            onClick={() => setShowDisputeConfirmModal(true)}
-                            disabled={loadingAction === 'agree'}
-                            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold px-5 py-2.5 text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
-                          >
-                            <Sparkles className="h-4 w-4 text-yellow-300" />
-                            <span>Review &amp; Confirm AI Settlement (75% Team Pool: ${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC)</span>
-                          </button>
-                        </div>
-                      ) : null}
+                    <div className="pt-1">
+                      <button
+                        onClick={() => setShowDisputeConfirmModal(true)}
+                        disabled={loadingAction === 'agree'}
+                        className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold px-5 py-2.5 text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+                      >
+                        <Sparkles className="h-4 w-4 text-yellow-300" />
+                        <span>Review &amp; Confirm AI Settlement (75% Team Pool: ${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC)</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1337,6 +1300,67 @@ export default function EscrowDetailPage() {
                 className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-xs font-extrabold text-white shadow-md shadow-emerald-600/20"
               >
                 Confirm & Release Funds
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Raise Dispute Confirmation Modal (Client POV) ── */}
+      {showRaiseDisputeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-rose-200 space-y-4">
+            <div className="flex items-center gap-2.5 text-rose-600">
+              <div className="h-10 w-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Confirm Formal Dispute Escalation</h3>
+                <p className="text-xs text-slate-500">Escalate to SuiPact AI Mediator</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to raise a formal dispute for contract <strong>"{escrow.title}"</strong>?
+            </p>
+
+            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 space-y-2 text-xs">
+              <div className="font-bold text-amber-950 flex items-center gap-1.5">
+                <Bot className="h-4 w-4 text-amber-700" />
+                <span>AI Mediation Process:</span>
+              </div>
+              <p className="text-[11px] text-amber-900 leading-relaxed">
+                The deliverable and contract specifications will be audited by the AI Mediator to recommend an unbiased fair compromise split:
+              </p>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="bg-white rounded-lg p-2 border border-amber-200 text-center">
+                  <span className="text-[10px] text-slate-500 block">Estimated Client Refund:</span>
+                  <span className="font-mono font-bold text-blue-700 text-xs">25% (${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC)</span>
+                </div>
+                <div className="bg-white rounded-lg p-2 border border-amber-200 text-center">
+                  <span className="text-[10px] text-slate-500 block">Freelancer Team Share:</span>
+                  <span className="font-mono font-bold text-emerald-700 text-xs">75% (${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                onClick={() => setShowRaiseDisputeModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                Cancel / Keep Reviewing
+              </button>
+              <button
+                onClick={() => {
+                  setShowRaiseDisputeModal(false);
+                  handleRaiseDispute();
+                }}
+                disabled={loadingAction === 'dispute'}
+                className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2 text-xs font-extrabold text-white shadow-md shadow-rose-600/20 cursor-pointer"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                <span>{loadingAction === 'dispute' ? 'Escalating...' : 'Confirm & Raise Dispute'}</span>
               </button>
             </div>
           </div>
