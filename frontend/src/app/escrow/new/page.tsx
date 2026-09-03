@@ -31,6 +31,7 @@ import {
   Mail,
   UserCheck,
   Check,
+  Coins,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -69,7 +70,7 @@ function Tooltip({ text }: { text: string }) {
 
 export default function NewEscrowPage() {
   const router = useRouter();
-  const { user, loginWithDemo } = useAuth();
+  const { user, loginWithDemo, balance } = useAuth();
   const { createEscrow } = useEscrow();
 
   const [aiModalOpen, setAiModalOpen] = useState(false);
@@ -705,6 +706,51 @@ export default function NewEscrowPage() {
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Atomic Payout Breakdown</h3>
               <div className="flex justify-center">
                 <SplitPieChart slices={pieSlices} totalAmount={totalAmount} />
+              </div>
+
+              {/* Deposit, Rate & USDC Financial Breakdown Card */}
+              <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/70 via-indigo-50/30 to-slate-50/80 p-4 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <Coins className="h-3.5 w-3.5 text-blue-600" />
+                    <span>Deposit &amp; Rate Details</span>
+                  </span>
+                  <span className="text-[10px] font-extrabold text-blue-700 bg-blue-100/90 border border-blue-200 px-2 py-0.5 rounded-full">
+                    Circle USDC
+                  </span>
+                </div>
+
+                <div className="divide-y divide-slate-200/70 space-y-1.5 pt-0.5">
+                  <div className="flex items-center justify-between text-slate-600 pt-1">
+                    <span>USDC Exchange Rate</span>
+                    <span className="font-mono font-bold text-slate-900">1 USDC = 1.00 USD</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600 pt-1.5">
+                    <span>Estimated Local Fiat (MYR)</span>
+                    <span className="font-mono font-semibold text-slate-700">≈ RM {(totalAmount * 4.45).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600 pt-1.5">
+                    <span>Sui Network Gas Fee</span>
+                    <span className="font-bold text-emerald-600 font-mono">$0.00 (Zero Fee Sponsored)</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600 pt-1.5">
+                    <span>Platform Service Fee</span>
+                    <span className="font-bold text-emerald-600 font-mono">$0.00 (Testnet Free)</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="font-extrabold text-slate-800">Total Escrow Deposit:</span>
+                    <span className="font-black text-base text-blue-700 font-mono">{formatUSDC(totalAmount)}</span>
+                  </div>
+                </div>
+
+                {balance !== undefined && (
+                  <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500">Your Wallet Balance:</span>
+                    <span className={`font-mono font-bold ${balance < totalAmount ? 'text-rose-600' : 'text-emerald-700'}`}>
+                      {formatUSDC(balance)} {balance < totalAmount ? '(Insufficient)' : '(Sufficient)'}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-2 text-xs">
