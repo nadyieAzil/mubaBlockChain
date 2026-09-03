@@ -174,16 +174,19 @@ export const Navbar: React.FC = () => {
                   {dropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                      <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-200 bg-white shadow-2xl z-50 animate-slide-down overflow-hidden">
-                        <div className="bg-blue-gradient px-4 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-blue-700 font-extrabold text-base uppercase shadow-sm">
+                      <div className="absolute right-0 mt-2.5 w-84 rounded-3xl border border-slate-200/90 bg-white shadow-2xl z-50 animate-slide-down overflow-hidden ring-1 ring-black/5">
+                        
+                        {/* Profile Header with Modern Gradient */}
+                        <div className="relative bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 px-5 py-4 text-white overflow-hidden">
+                          <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-xl pointer-events-none" />
+                          <div className="relative z-10 flex items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 border border-white/25 text-white font-black text-lg uppercase shadow-inner backdrop-blur-md">
                               {user.name.charAt(0)}
                             </div>
-                            <div>
-                              <h4 className="text-sm font-extrabold text-white">{user.name}</h4>
-                              <p className="text-[11px] text-blue-100">{user.email || 'No email'}</p>
-                              <span className="inline-flex items-center gap-1 mt-1 rounded bg-white/20 text-white text-[9px] font-extrabold uppercase px-2 py-0.5">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-sm font-extrabold text-white truncate">{user.name}</h4>
+                              <p className="text-[11px] text-blue-100/90 truncate">{user.email || 'No email'}</p>
+                              <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-white/15 border border-white/20 text-white text-[9.5px] font-bold uppercase px-2.5 py-0.5 backdrop-blur-xs">
                                 {user.role === 'client' ? (
                                   <><Building2 className="h-2.5 w-2.5" /> Client Account</>
                                 ) : user.role === 'freelancer' ? (
@@ -197,79 +200,103 @@ export const Navbar: React.FC = () => {
                         </div>
 
                         <div className="p-4 space-y-3">
-                          {/* Live Balance in Dropdown */}
-                          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 flex items-center justify-between">
-                            <div>
-                              <span className="text-[10px] font-extrabold uppercase text-emerald-800">Connected Wallet Balance</span>
-                              <div className="text-base font-extrabold text-emerald-900 font-mono">{formatUSDC(balance)}</div>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setShowTopUpModal(true);
-                                setDropdownOpen(false);
-                              }}
-                              className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700 transition-all shadow-xs cursor-pointer"
-                            >
-                              <Sparkles className="h-3 w-3" /> Top Up / Reset
-                            </button>
-                          </div>
-
-                          {/* Sui Address */}
-                          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-1.5">
+                          {/* Connected Balance Card */}
+                          <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-50 p-3.5 space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-extrabold uppercase text-slate-500">Sui zkLogin Address</span>
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                <Wallet className="h-3.5 w-3.5 text-blue-600" />
+                                <span>Connected Wallet</span>
+                              </span>
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                Testnet USDC
+                              </span>
+                            </div>
+                            <div className="flex items-end justify-between gap-2 pt-0.5">
+                              <div>
+                                <span className="text-[10px] font-medium text-slate-400 block">Available Balance</span>
+                                <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                                  {formatUSDC(balance)}
+                                </div>
+                              </div>
                               <button
-                                onClick={copyAddress}
-                                className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                                onClick={() => {
+                                  setShowTopUpModal(true);
+                                  setDropdownOpen(false);
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 text-xs font-extrabold shadow-sm transition-all cursor-pointer hover:shadow-blue-600/25"
                               >
-                                {copied ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3 text-blue-500" />}
-                                {copied ? 'Copied!' : 'Copy'}
+                                <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
+                                <span>Top Up</span>
                               </button>
                             </div>
-                            <p className="font-mono text-[11px] text-slate-700 break-all leading-relaxed">{user.address}</p>
                           </div>
 
-                          {/* Explorer Link */}
-                          <a
-                            href={getSuiScanAddressUrl(user.address)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-between text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors px-1"
-                          >
-                            <span>View on SuiScan Explorer</span>
-                            <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
-                          </a>
+                          {/* Sui Address & SuiScan Link */}
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                                Sui zkLogin Address
+                              </span>
+                              <a
+                                href={getSuiScanAddressUrl(user.address)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline"
+                              >
+                                <span>SuiScan</span>
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </div>
 
-                          {/* Reset Balance to 0 and Demo Controls */}
-                          <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                            <button
-                              onClick={() => {
-                                resetBalance(0);
-                                setDropdownOpen(false);
-                              }}
-                              className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 py-2 text-xs font-bold text-rose-700 transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-rose-600" />
-                              Reset Wallet Balance to $0.00
-                            </button>
+                            <div className="flex items-center justify-between gap-2 rounded-xl bg-white border border-slate-200/90 px-3 py-2">
+                              <span className="font-mono text-xs font-semibold text-slate-700 truncate" title={user.address}>
+                                {formatAddress(user.address, 10)}
+                              </span>
+                              <button
+                                onClick={copyAddress}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors shrink-0 cursor-pointer"
+                                title="Copy full address"
+                              >
+                                {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                                <span>{copied ? 'Copied' : 'Copy'}</span>
+                              </button>
+                            </div>
+                          </div>
 
-                            <button
-                              onClick={() => {
-                                resetDemoState();
-                                setDropdownOpen(false);
-                              }}
-                              className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-100 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
-                              Restore Persona Defaults
-                            </button>
+                          {/* Sandbox & Account Management Actions */}
+                          <div className="pt-2 border-t border-slate-100 space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => {
+                                  resetBalance(0);
+                                  setDropdownOpen(false);
+                                }}
+                                className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100 py-2 text-[11px] font-bold text-rose-700 transition-colors cursor-pointer"
+                                title="Reset wallet to $0.00"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                                <span>Reset to $0</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  resetDemoState();
+                                  setDropdownOpen(false);
+                                }}
+                                className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 py-2 text-[11px] font-bold text-slate-700 transition-colors cursor-pointer"
+                                title="Restore default balance for this persona"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+                                <span>Restore Balance</span>
+                              </button>
+                            </div>
 
                             <button
                               onClick={handleLogout}
-                              className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white hover:bg-slate-800 transition-colors cursor-pointer mt-1"
+                              className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 py-2.5 text-xs font-extrabold text-slate-700 hover:text-slate-900 transition-all cursor-pointer shadow-2xs"
                             >
-                              <LogOut className="h-4 w-4" />
-                              Sign Out
+                              <LogOut className="h-3.5 w-3.5 text-slate-400" />
+                              <span>Sign Out</span>
                             </button>
                           </div>
                         </div>
