@@ -1106,18 +1106,18 @@ export default function EscrowDetailPage() {
                       ) : escrow.clientAgrees && !escrow.freelancerAgrees ? (
                         <div className="inline-flex items-center gap-1.5 rounded-xl bg-blue-100 text-blue-900 px-4 py-2.5 text-xs font-extrabold border border-blue-300">
                           <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                          <span>✓ You Pre-Approved 25% Refund — Awaiting Lead Freelancer Acceptance</span>
+                          <span>✓ You Confirmed 25% Refund — Awaiting Lead Freelancer Acceptance</span>
                         </div>
                       ) : (
-                        <div className="flex flex-wrap items-center justify-between gap-2 p-1">
-                          <span className="text-xs text-slate-600">Awaiting Freelancer to review and accept 75% terms, or you can pre-approve:</span>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs text-slate-500 italic">Please review the 25% refund terms and confirm:</span>
                           <button
                             onClick={handleAgreeResolution}
                             disabled={loadingAction === 'agree'}
                             className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition-all cursor-pointer"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
-                            <span>Pre-Approve 25% Refund Settlement</span>
+                            <span>Accept &amp; Confirm 25% Refund Settlement</span>
                           </button>
                         </div>
                       )}
@@ -1129,9 +1129,9 @@ export default function EscrowDetailPage() {
                       {escrow.freelancerAgrees && !escrow.clientAgrees ? (
                         <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 text-emerald-900 px-4 py-2.5 text-xs font-extrabold border border-emerald-300">
                           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          <span>✓ You Accepted 75% Settlement — Awaiting Client's Final Approval &amp; Release</span>
+                          <span>✓ You Accepted 75% Settlement — Awaiting Client's Final Confirmation &amp; Release</span>
                         </div>
-                      ) : (
+                      ) : !escrow.freelancerAgrees ? (
                         <div className="pt-1">
                           <button
                             onClick={() => setShowDisputeConfirmModal(true)}
@@ -1142,7 +1142,7 @@ export default function EscrowDetailPage() {
                             <span>Review &amp; Confirm AI Settlement (75% Team Pool: ${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC)</span>
                           </button>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   )}
                 </div>
