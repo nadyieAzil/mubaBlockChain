@@ -1084,27 +1084,65 @@ export default function EscrowDetailPage() {
 
                   {/* Role-Specific Action Triggers */}
                   {isClient && (
-                    <div className="rounded-xl bg-blue-50/90 border border-blue-200 p-3.5 space-y-1 animate-fade-in">
-                      <div className="flex items-center gap-2 text-xs font-bold text-blue-950">
-                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
-                        <span>Client Pre-Authorized AI Resolution (25% Refund: +${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC)</span>
-                      </div>
-                      <p className="text-[11px] text-blue-700 pl-6">
-                        Awaiting Lead Freelancer to review and confirm the 75% settlement terms. Once confirmed, payouts and your refund will be automatically executed on Sui Testnet.
-                      </p>
+                    <div>
+                      {escrow.freelancerAgrees && !escrow.clientAgrees ? (
+                        <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50/90 p-4 space-y-2.5 animate-fade-in shadow-xs">
+                          <div className="flex items-center gap-2 font-extrabold text-emerald-950 text-xs">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            <span>Freelancer Accepted 75% AI Settlement — Client Confirmation Required</span>
+                          </div>
+                          <p className="text-[11px] text-emerald-900 leading-relaxed">
+                            Lead Freelancer has accepted the 75% compromise ($${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC). As the Client, please confirm and release the dispute payout below. You will immediately receive a <strong>25% ($${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC) refund</strong> credited back to your wallet.
+                          </p>
+                          <button
+                            onClick={handleAgreeResolution}
+                            disabled={loadingAction === 'agree'}
+                            className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-2.5 text-xs shadow-md transition-all cursor-pointer"
+                          >
+                            <Zap className="h-4 w-4 text-yellow-300" />
+                            <span>Confirm &amp; Release Dispute Payout (Claim ${((escrow.totalAmount * 25) / 100).toFixed(2)} Refund)</span>
+                          </button>
+                        </div>
+                      ) : escrow.clientAgrees && !escrow.freelancerAgrees ? (
+                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-blue-100 text-blue-900 px-4 py-2.5 text-xs font-extrabold border border-blue-300">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                          <span>✓ You Pre-Approved 25% Refund — Awaiting Lead Freelancer Acceptance</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center justify-between gap-2 p-1">
+                          <span className="text-xs text-slate-600">Awaiting Freelancer to review and accept 75% terms, or you can pre-approve:</span>
+                          <button
+                            onClick={handleAgreeResolution}
+                            disabled={loadingAction === 'agree'}
+                            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition-all cursor-pointer"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>Pre-Approve 25% Refund Settlement</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {isFreelancer && (
-                    <div className="pt-1">
-                      <button
-                        onClick={() => setShowDisputeConfirmModal(true)}
-                        disabled={loadingAction === 'agree'}
-                        className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold px-5 py-2.5 text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
-                      >
-                        <Sparkles className="h-4 w-4 text-yellow-300" />
-                        <span>Review &amp; Confirm AI Settlement (75% Team Pool: ${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC)</span>
-                      </button>
+                    <div>
+                      {escrow.freelancerAgrees && !escrow.clientAgrees ? (
+                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 text-emerald-900 px-4 py-2.5 text-xs font-extrabold border border-emerald-300">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          <span>✓ You Accepted 75% Settlement — Awaiting Client's Final Approval &amp; Release</span>
+                        </div>
+                      ) : (
+                        <div className="pt-1">
+                          <button
+                            onClick={() => setShowDisputeConfirmModal(true)}
+                            disabled={loadingAction === 'agree'}
+                            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold px-5 py-2.5 text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+                          >
+                            <Sparkles className="h-4 w-4 text-yellow-300" />
+                            <span>Review &amp; Confirm AI Settlement (75% Team Pool: ${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC)</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
