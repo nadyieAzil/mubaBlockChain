@@ -686,7 +686,7 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return {
           ...e,
           status: STATUS_CODES.DISPUTED,
-          clientAgrees: false,
+          clientAgrees: true,
           freelancerAgrees: false,
           disputeVerdict: {
             freelancerPct,

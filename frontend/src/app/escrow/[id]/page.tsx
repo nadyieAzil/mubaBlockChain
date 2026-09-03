@@ -300,15 +300,19 @@ export default function EscrowDetailPage() {
     }
   };
 
-  const executeDisputeSettlement = async () => {
-    setShowDisputeConfirmModal(false);
+  const handleAgreeResolution = async () => {
     setLoadingAction('agree');
     try {
+      const willBothAgree = isClient ? escrow.freelancerAgrees : escrow.clientAgrees;
       await agreeToRelease(escrow.id);
-      setShowPTBVisualizer(true);
-      setSuccessMessage('AI dispute settlement mutually confirmed! Funds disbursed: 75% to team, 25% refunded to Client.');
+      if (willBothAgree) {
+        setShowPTBVisualizer(true);
+        setSuccessMessage('AI dispute settlement mutually signed & finalized! 75% payout distributed to team, 25% refunded to Client.');
+      } else {
+        setSuccessMessage('Your dispute resolution agreement signature has been recorded. Awaiting counter-signature from the other party.');
+      }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to execute dispute settlement.');
+      setErrorMessage(err.message || 'Failed to sign resolution.');
     } finally {
       setLoadingAction(null);
     }
@@ -1080,63 +1084,27 @@ export default function EscrowDetailPage() {
 
                   {/* Role-Specific Action Triggers */}
                   {isClient && (
-                    <div>
-                      {escrow.freelancerAgrees && !escrow.clientAgrees ? (
-                        <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50/90 p-4 space-y-2.5 animate-fade-in shadow-xs">
-                          <div className="flex items-center gap-2 font-extrabold text-emerald-950 text-xs">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                            <span>Freelancer Accepted 75% AI Settlement — Client Confirmation Required</span>
-                          </div>
-                          <p className="text-[11px] text-emerald-900 leading-relaxed">
-                            Lead Freelancer has accepted the 75% compromise ($${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC). As the Client, please confirm and release the dispute payout below. You will immediately receive a <strong>25% ($${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC) refund</strong> credited back to your wallet.
-                          </p>
-                          <button
-                            onClick={() => setShowDisputeConfirmModal(true)}
-                            disabled={loadingAction === 'agree'}
-                            className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-2.5 text-xs shadow-md transition-all cursor-pointer"
-                          >
-                            <Zap className="h-4 w-4 text-yellow-300" />
-                            <span>Confirm &amp; Release Dispute Payout (Claim ${((escrow.totalAmount * 25) / 100).toFixed(2)} Refund)</span>
-                          </button>
-                        </div>
-                      ) : escrow.clientAgrees && !escrow.freelancerAgrees ? (
-                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-blue-100 text-blue-900 px-4 py-2.5 text-xs font-extrabold border border-blue-300">
-                          <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                          <span>✓ You Pre-Approved 25% Refund — Awaiting Lead Freelancer Acceptance</span>
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs text-slate-500 italic">Awaiting Freelancer to review and accept 75% terms, or you can pre-approve:</span>
-                          <button
-                            onClick={() => setShowDisputeConfirmModal(true)}
-                            disabled={loadingAction === 'agree'}
-                            className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-extrabold text-white shadow-sm transition-all cursor-pointer"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            <span>Pre-Approve 25% Refund Settlement</span>
-                          </button>
-                        </div>
-                      )}
+                    <div className="rounded-xl bg-blue-50/90 border border-blue-200 p-3.5 space-y-1 animate-fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-blue-950">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                        <span>Client Pre-Authorized AI Resolution (25% Refund: +${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC)</span>
+                      </div>
+                      <p className="text-[11px] text-blue-700 pl-6">
+                        Awaiting Lead Freelancer to review and confirm the 75% settlement terms. Once confirmed, payouts and your refund will be automatically executed on Sui Testnet.
+                      </p>
                     </div>
                   )}
 
                   {isFreelancer && (
-                    <div>
-                      {escrow.freelancerAgrees && !escrow.clientAgrees ? (
-                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 text-emerald-900 px-4 py-2.5 text-xs font-extrabold border border-emerald-300">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          <span>✓ You Accepted 75% Settlement — Awaiting Client's Final Approval &amp; Release</span>
-                        </div>
-                      ) : !escrow.freelancerAgrees ? (
-                        <button
-                          onClick={() => setShowDisputeConfirmModal(true)}
-                          disabled={loadingAction === 'agree'}
-                          className="flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all cursor-pointer"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span>Accept AI Settlement Terms (75% Team Pool: ${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC)</span>
-                        </button>
-                      ) : null}
+                    <div className="pt-1">
+                      <button
+                        onClick={() => setShowDisputeConfirmModal(true)}
+                        disabled={loadingAction === 'agree'}
+                        className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold px-5 py-2.5 text-xs shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+                      >
+                        <Sparkles className="h-4 w-4 text-yellow-300" />
+                        <span>Review &amp; Confirm AI Settlement (75% Team Pool: ${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC)</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1337,6 +1305,91 @@ export default function EscrowDetailPage() {
         </div>
       )}
 
+      {/* ── Dispute Resolution Confirmation Modal (Freelancer POV) ── */}
+      {showDisputeConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-blue-200 space-y-4">
+            <div className="flex items-center gap-2.5 text-blue-600">
+              <div className="h-10 w-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                <Bot className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Confirm AI Dispute Settlement Release</h3>
+                <p className="text-xs text-slate-500">Atomic Programmable Transaction Block (PTB) on Sui</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Client <strong>{escrow.clientName || 'Alice Corp'}</strong> has authorized the AI Mediator resolution terms. Please review the financial breakdown below before triggering instant automatic release:
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 space-y-1">
+                <span className="font-bold text-blue-900 uppercase text-[10px]">Client Partial Refund (25%):</span>
+                <div className="text-base font-extrabold text-blue-800 font-mono">
+                  +${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC
+                </div>
+                <p className="text-[10px] text-blue-600">Refunded to Client wallet</p>
+              </div>
+
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 space-y-1">
+                <span className="font-bold text-emerald-900 uppercase text-[10px]">Your Team Pool (75%):</span>
+                <div className="text-base font-extrabold text-emerald-800 font-mono">
+                  +${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC
+                </div>
+                <p className="text-[10px] text-emerald-600">Split to {escrow.recipients.length} recipients</p>
+              </div>
+            </div>
+
+            {/* Recipient Split Breakdown */}
+            <div className="rounded-xl border border-slate-200 overflow-hidden text-xs">
+              <div className="bg-slate-50 px-3 py-1.5 font-extrabold text-[10px] uppercase text-slate-500 border-b border-slate-200">
+                Dispute Payout Split Breakdown (75%)
+              </div>
+              <div className="divide-y divide-slate-100 max-h-40 overflow-y-auto">
+                {escrow.recipients.map((r, i) => {
+                  const pct = (r.percentageBasisPoints / 100).toFixed(1);
+                  const payout = (((escrow.totalAmount * 75) / 100) * r.percentageBasisPoints) / 10000;
+                  return (
+                    <div key={i} className="flex items-center justify-between p-2.5">
+                      <div>
+                        <span className="font-bold text-slate-800">{r.name || `Recipient ${i + 1}`}</span>
+                        <span className="text-[10px] text-slate-400 ml-1.5 font-mono">({pct}%)</span>
+                      </div>
+                      <span className="font-extrabold text-emerald-700 font-mono">${payout.toFixed(2)} USDC</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900 leading-relaxed">
+              ⚡ <strong>Instant Execution:</strong> Confirming will immediately disburse funds on Sui via a single Programmable Transaction Block (PTB). All team members and the client will be funded simultaneously.
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                onClick={() => setShowDisputeConfirmModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                Review Again
+              </button>
+              <button
+                onClick={() => {
+                  setShowDisputeConfirmModal(false);
+                  handleAgreeResolution();
+                }}
+                disabled={loadingAction === 'agree'}
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-xs font-extrabold text-white shadow-md shadow-emerald-600/20 cursor-pointer"
+              >
+                <Zap className="h-4 w-4 text-yellow-300" />
+                <span>Confirm &amp; Execute Instant Release</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Penalty Cancellation Confirmation Modal (Item 15) ── */}
       {showPenaltyCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
@@ -1362,99 +1415,6 @@ export default function EscrowDetailPage() {
                 className="rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2 text-xs font-extrabold text-white shadow-sm"
               >
                 Confirm Cancellation & Pay 25%
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── AI Dispute Settlement Confirmation Modal ── */}
-      {showDisputeConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-amber-200 space-y-4 animate-scale-in text-slate-900">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-              <div className="h-10 w-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0">
-                <Bot className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-extrabold text-slate-900">Sahkan Pelepasan Pertikaian AI</h3>
-                <p className="text-xs text-slate-500">AI Dispute Compromise Settlement Execution</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Adakah anda pasti mahu mengesahkan penyelesaian pertikaian ini? Dana akan diagihkan secara automatik dan muktamad di rantaian blok Sui mengikut nisbah kompromi AI Mediator (<strong>75% Pasukan Freelancer / 25% Refund Client</strong>):
-            </p>
-
-            {/* Financial Payout Summary Box */}
-            <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-3 text-xs">
-              <div className="flex items-center justify-between font-bold text-slate-700 pb-2 border-b border-slate-200">
-                <span>Nilai Kontrak Terkunci:</span>
-                <span className="text-sm font-extrabold text-slate-900 font-mono">${escrow.totalAmount.toFixed(2)} USDC</span>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-blue-900 flex items-center gap-1.5">
-                    💼 Pulangan Balik Kepada Client (25%):
-                  </span>
-                  <span className="font-mono font-extrabold text-blue-700">
-                    +${((escrow.totalAmount * 25) / 100).toFixed(2)} USDC
-                  </span>
-                </div>
-
-                <div className="space-y-1 pt-1 border-t border-dashed border-slate-200">
-                  <div className="flex items-center justify-between font-bold text-emerald-900">
-                    <span className="flex items-center gap-1.5">👥 Agihan Pasukan Freelancer (75% Pool):</span>
-                    <span className="font-mono font-extrabold text-emerald-700">
-                      +${((escrow.totalAmount * 75) / 100).toFixed(2)} USDC
-                    </span>
-                  </div>
-                  
-                  {/* Recipient breakdown */}
-                  <div className="pl-3 space-y-0.5 text-[11px] text-slate-600 font-mono">
-                    {escrow.recipients.map((r, i) => {
-                      const pool = (escrow.totalAmount * 75) / 100;
-                      const splitAmount = (pool * r.percentageBasisPoints) / 10000;
-                      return (
-                        <div key={i} className="flex items-center justify-between">
-                          <span>• {r.name || `Penerima ${i + 1}`}:</span>
-                          <span>${splitAmount.toFixed(2)} USDC</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 flex items-start gap-2">
-              <Zap className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-              <span>
-                <strong>Transaksi Atomik Sui ($0 Gas):</strong> Payout akan dilaksanakan serentak dalam satu blok transaksi (PTB) tanpa sebarang yuran gas.
-              </span>
-            </div>
-
-            <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
-              <button
-                onClick={() => setShowDisputeConfirmModal(false)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-              >
-                Batal / Cancel
-              </button>
-              <button
-                onClick={executeDisputeSettlement}
-                disabled={loadingAction === 'agree'}
-                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-extrabold text-white shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer"
-              >
-                {loadingAction === 'agree' ? (
-                  <span>Melaksanakan Transaksi...</span>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-white" />
-                    <span>Ya, Sahkan &amp; Lepaskan Payout Sekarang</span>
-                  </>
-                )}
               </button>
             </div>
           </div>
