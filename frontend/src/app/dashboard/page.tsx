@@ -13,7 +13,7 @@ import { OnboardingTour } from '@/components/OnboardingTour';
 import { formatUSDC, formatAddress, formatDate } from '@/lib/utils';
 import {
   Plus, Search, Lock, ArrowUpRight, Users, CheckCircle2, Coins,
-  Shield, Eye, FolderLock, Zap, LogIn, AlertCircle, Clock,
+  Shield, ShieldCheck, Eye, FolderLock, Zap, LogIn, AlertCircle, Clock,
   ChevronDown, ChevronUp, Inbox, Star,
 } from 'lucide-react';
 
@@ -283,11 +283,16 @@ export default function DashboardPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
             <div>
-              <p className="text-blue-200 text-xs font-semibold mb-1">
-                Welcome back, {user.name.split(' ')[0]}
-              </p>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-blue-200 text-xs font-semibold">
+                  Welcome back, {user.name.split(' ')[0]}
+                </p>
+                <span className="text-[10px] font-extrabold uppercase bg-white/20 text-white px-2 py-0.5 rounded-full">
+                  {user.role === 'client' ? '🏢 Client' : user.role === 'freelancer' ? '💻 Freelancer' : '👥 Team Member'}
+                </span>
+              </div>
               <h1 className="text-2xl font-extrabold text-white tracking-tight">
-                My Action Inbox
+                {user.role === 'client' ? 'My Hired Projects & Inbox' : 'My Assigned Contracts & Inbox'}
               </h1>
               <p className="text-blue-200 text-xs mt-1">
                 {urgentActions.length > 0
@@ -295,18 +300,25 @@ export default function DashboardPage() {
                   : `No urgent actions · ${myEscrows.length} total contracts`}
               </p>
             </div>
-            <Link
-              href="/escrow/new"
-              className="flex items-center gap-2 rounded-2xl bg-white px-5 py-2.5 text-sm font-bold text-blue-700 shadow-md hover:bg-blue-50 transition-all"
-            >
-              <Plus className="h-4 w-4" /> New Escrow
-            </Link>
+
+            {user.role === 'client' ? (
+              <Link
+                href="/escrow/new"
+                className="flex items-center gap-2 rounded-2xl bg-white px-5 py-2.5 text-sm font-bold text-blue-700 shadow-md hover:bg-blue-50 transition-all cursor-pointer"
+              >
+                <Plus className="h-4 w-4" /> Create New Escrow
+              </Link>
+            ) : (
+              <div className="flex items-center gap-2 rounded-2xl bg-white/10 border border-white/20 px-4 py-2.5 text-xs font-bold text-yellow-200 shadow-inner">
+                <span>💻 Freelancer Workspace</span>
+              </div>
+            )}
           </div>
 
           {/* Stat Cards */}
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'Your Volume', value: totalVolume, icon: <Coins className="h-5 w-5 text-blue-200" />, color: 'text-white' },
+              { label: user.role === 'client' ? 'Total Funded' : 'Contract Volume', value: totalVolume, icon: <Coins className="h-5 w-5 text-blue-200" />, color: 'text-white' },
               { label: 'Active Locked', value: lockedVolume, icon: <Lock className="h-5 w-5 text-yellow-300" />, color: 'text-yellow-300' },
               { label: 'Settled Payouts', value: releasedVolume, icon: <CheckCircle2 className="h-5 w-5 text-emerald-300" />, color: 'text-emerald-300' },
             ].map((s, i) => (
@@ -327,6 +339,21 @@ export default function DashboardPage() {
 
       {/* ── Main Content ─────────────────────────────────────── */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        
+        {/* Role Explanation Notice for Freelancers */}
+        {user.role !== 'client' && (
+          <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4 flex items-center gap-3.5 text-xs text-blue-900 shadow-2xs">
+            <div className="h-9 w-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <ShieldCheck className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-extrabold text-blue-950">Freelancer Workspace &amp; Assigned Orders</p>
+              <p className="text-blue-800 text-[11px] mt-0.5 leading-relaxed">
+                You are currently viewing all contracts where you are assigned as Lead Freelancer or Team Recipient. Review client agreements, submit deliverables, and track instant split payouts. (New escrows are created &amp; funded by hiring Clients).
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Search + Filter Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

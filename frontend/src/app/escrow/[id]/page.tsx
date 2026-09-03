@@ -4,7 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { useEscrow } from '@/context/EscrowContext';
+import { useEscrow, DeliverableFile } from '@/context/EscrowContext';
 import { StatusBadge } from '@/components/StatusBadge';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import { DisclaimerBanner } from '@/components/DisclaimerBanner';
@@ -94,6 +94,8 @@ export default function EscrowDetailPage() {
   const [showPenaltyCancelModal, setShowPenaltyCancelModal] = useState(false);
   const [deliverableDocName, setDeliverableDocName] = useState<string>('');
   const [deliverableDocUrl, setDeliverableDocUrl] = useState<string>('');
+  const [deliverableFiles, setDeliverableFiles] = useState<DeliverableFile[]>([]);
+  const [deliverableComment, setDeliverableComment] = useState<string>('');
   const [isUploadingDeliverableDoc, setIsUploadingDeliverableDoc] = useState(false);
   const [viewingPDF, setViewingPDF] = useState<{ url: string; name: string; title: string } | null>(null);
 
@@ -107,38 +109,51 @@ export default function EscrowDetailPage() {
     }
   }, [isNew, escrow, id]);
 
-  // Pre-fill deliverable URI and existing attachments if rework is requested
+  // Pre-fill deliverable URI, files, and comments if rework is requested
   useEffect(() => {
     if (escrow?.isRevisionRequested && escrow.deliveryProofUri && !proofInput) {
       setProofInput(escrow.deliveryProofUri);
     }
-    if (escrow?.deliverableAttachmentName && !deliverableDocName) {
+    if (escrow?.deliverableFiles && escrow.deliverableFiles.length > 0 && deliverableFiles.length === 0) {
+      setDeliverableFiles(escrow.deliverableFiles);
+    } else if (escrow?.deliverableAttachmentName && !deliverableDocName) {
       setDeliverableDocName(escrow.deliverableAttachmentName);
       setDeliverableDocUrl(escrow.deliverableAttachmentUrl || '');
     }
-  }, [escrow?.isRevisionRequested, escrow?.deliveryProofUri, escrow?.deliverableAttachmentName]);
-
-  const handleDeliverableDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      setErrorMessage('Please upload a PDF document (.pdf only).');
-      return;
+    if (escrow?.deliverableComment && !deliverableComment) {
+      setDeliverableComment(escrow.deliverableComment);
     }
+  }, [escrow?.isRevisionRequested, escrow?.deliveryProofUri, escrow?.deliverableAttachmentName, escrow?.deliverableFiles, escrow?.deliverableComment]);
+
+  const handleMultiFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setIsUploadingDeliverableDoc(true);
     setErrorMessage(null);
     try {
-      const res = await uploadDocument(file);
-      setDeliverableDocUrl(res.downloadUrl);
-      setDeliverableDocName(res.fileName);
-      setSuccessMessage(`Document "${file.name}" attached successfully.`);
+      const newFiles: DeliverableFile[] = [];
+      for (const file of Array.from(files)) {
+        const res = await uploadDocument(file);
+        newFiles.push({
+          name: res.fileName,
+          url: res.downloadUrl,
+          size: file.size,
+          type: file.type,
+          uploadedAt: new Date().toISOString(),
+        });
+      }
+      setDeliverableFiles((prev) => [...prev, ...newFiles]);
+      setSuccessMessage(`${newFiles.length} deliverable file(s) attached successfully.`);
     } catch (err: any) {
-      setErrorMessage('Document upload failed: ' + (err.message || 'Unknown error'));
+      setErrorMessage('File upload failed: ' + (err.message || 'Unknown error'));
     } finally {
       setIsUploadingDeliverableDoc(false);
     }
+  };
+
+  const removeDeliverableFile = (index: number) => {
+    setDeliverableFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const userAddr = user?.address?.toLowerCase();
@@ -187,15 +202,26 @@ export default function EscrowDetailPage() {
     }
   };
 
-  // Submit Deliverable (Lead Freelancer Only)
+  // Submit Deliverable (Lead Freelancer Only - supports URL, multiple files, and/or comments)
   const handleDeliver = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!proofInput.trim()) return;
+    const hasProofUrl = proofInput.trim().length > 0;
+    const hasFiles = deliverableFiles.length > 0 || !!deliverableDocUrl;
+    const hasComment = deliverableComment.trim().length > 0;
 
-    const { sanitizedUrl, isValid } = sanitizeDeliverableUri(proofInput);
-    if (!isValid || !sanitizedUrl) {
-      setErrorMessage('Security Warning: Deliverable URI must be a valid https://, ipfs://, or ar:// URI.');
+    if (!hasProofUrl && !hasFiles && !hasComment) {
+      setErrorMessage('Please provide a deliverable proof URL, attach files/posters, or write an update comment.');
       return;
+    }
+
+    let sanitizedUrl: string | undefined = undefined;
+    if (hasProofUrl) {
+      const sanitized = sanitizeDeliverableUri(proofInput);
+      if (!sanitized.isValid || !sanitized.sanitizedUrl) {
+        setErrorMessage('Security Warning: Deliverable URI must be a valid https://, ipfs://, or ar:// URI.');
+        return;
+      }
+      sanitizedUrl = sanitized.sanitizedUrl;
     }
 
     setLoadingAction('deliver');
@@ -203,19 +229,17 @@ export default function EscrowDetailPage() {
     try {
       await submitDeliverable(
         escrow.id,
-        sanitizedUrl,
-        deliverableDocUrl || undefined,
-        deliverableDocName || undefined
+        sanitizedUrl || '',
+        deliverableFiles[0]?.url || deliverableDocUrl || undefined,
+        deliverableFiles[0]?.name || deliverableDocName || undefined,
+        deliverableFiles,
+        deliverableComment.trim() || undefined
       );
       setSuccessMessage(
         escrow.isRevisionRequested
-          ? 'Revised deliverable and updated documents submitted successfully! Client notified for review.'
+          ? 'Revised deliverable and update notes submitted successfully! Client notified for review.'
           : 'Deliverable submitted successfully! Client has been notified for review.'
       );
-      setProofInput('');
-      setProofFingerprint(null);
-      setDeliverableDocName('');
-      setDeliverableDocUrl('');
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to submit deliverable.');
     } finally {
@@ -705,36 +729,97 @@ export default function EscrowDetailPage() {
                 <span className="text-[10px] text-slate-500">Only Lead Freelancer Can Submit Proof</span>
               </div>
 
-              {escrow.deliveryProofUri ? (
+              {escrow.deliveryProofUri || (escrow.deliverableFiles && escrow.deliverableFiles.length > 0) || escrow.deliverableComment ? (
                 <div className="space-y-3">
                   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-mono text-xs text-blue-700 font-bold truncate flex-1">{escrow.deliveryProofUri}</div>
-                      <a
-                        href={sanitizeDeliverableUri(escrow.deliveryProofUri).sanitizedUrl || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-colors"
-                      >
-                        Open In New Tab <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
+                    {/* Direct Proof Link (if provided) */}
+                    {escrow.deliveryProofUri && escrow.deliveryProofUri.startsWith('http') && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="font-mono text-xs text-blue-700 font-bold truncate flex-1">{escrow.deliveryProofUri}</div>
+                          <a
+                            href={sanitizeDeliverableUri(escrow.deliveryProofUri).sanitizedUrl || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-colors"
+                          >
+                            Open In New Tab <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
 
-                    {/* In-App Preview / Inspection (Item 12) */}
-                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs flex items-center justify-between">
-                      <span className="text-slate-600 font-semibold">🔍 Deliverable Inspection Available</span>
-                      <a
-                        href={sanitizeDeliverableUri(escrow.deliveryProofUri).sanitizedUrl || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 font-bold hover:underline flex items-center gap-1"
-                      >
-                        <Eye className="h-3.5 w-3.5" /> Direct Inspection Link
-                      </a>
-                    </div>
+                        {/* In-App Inspection Link */}
+                        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs flex items-center justify-between">
+                          <span className="text-slate-600 font-semibold">🔍 Deliverable Inspection Available</span>
+                          <a
+                            href={sanitizeDeliverableUri(escrow.deliveryProofUri).sanitizedUrl || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 font-bold hover:underline flex items-center gap-1"
+                          >
+                            <Eye className="h-3.5 w-3.5" /> Direct Inspection Link
+                          </a>
+                        </div>
+                      </div>
+                    )}
 
-                    {/* Attached Supporting PDF / Document */}
-                    {escrow.deliverableAttachmentUrl && (
+                    {/* Freelancer Notes & Comments */}
+                    {escrow.deliverableComment && (
+                      <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 space-y-1.5 shadow-2xs">
+                        <div className="flex items-center gap-2 text-xs font-bold text-blue-900">
+                          <MessageSquare className="h-4 w-4 text-blue-600 shrink-0" />
+                          <span>Lead Freelancer Delivery Notes &amp; Comments:</span>
+                        </div>
+                        <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+                          {escrow.deliverableComment}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Attached Supporting Deliverable Files / Posters (Multiple) */}
+                    {escrow.deliverableFiles && escrow.deliverableFiles.length > 0 ? (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold uppercase text-slate-700 flex items-center gap-1.5">
+                            <Paperclip className="h-4 w-4 text-blue-600" />
+                            Attached Deliverables ({escrow.deliverableFiles.length} file{escrow.deliverableFiles.length > 1 ? 's' : ''})
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold">Inspectable Artifacts</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {escrow.deliverableFiles.map((file, fIdx) => (
+                            <div key={fIdx} className="rounded-xl bg-white border border-slate-200 p-3 flex items-center justify-between gap-2 shadow-2xs">
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <div className="h-8 w-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+                                  <FileText className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold text-slate-900 truncate" title={file.name}>{file.name}</p>
+                                  <span className="text-[10px] text-slate-400">
+                                    {file.size ? `${(file.size / 1024).toFixed(1)} KB` : 'Attached Document'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setViewingPDF({
+                                    url: file.url,
+                                    name: file.name,
+                                    title: `Deliverable File: ${file.name}`,
+                                  })
+                                }
+                                className="shrink-0 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 text-[11px] flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                <span>View</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : escrow.deliverableAttachmentUrl ? (
                       <div className="rounded-lg border border-blue-200 bg-blue-50/80 p-3 text-xs flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2 text-slate-800 font-semibold">
                           <FileText className="h-4 w-4 text-blue-600 shrink-0" />
@@ -755,15 +840,17 @@ export default function EscrowDetailPage() {
                           <span>View &amp; Print PDF</span>
                         </button>
                       </div>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* AI Deliverable Quality Audit Card */}
-                  <AIDeliverableAuditCard
-                    escrowTitle={escrow.title}
-                    scopeDescription={escrow.scopeDescription || escrow.title}
-                    deliverableUrl={escrow.deliveryProofUri}
-                  />
+                  {escrow.deliveryProofUri && escrow.deliveryProofUri.startsWith('http') && (
+                    <AIDeliverableAuditCard
+                      escrowTitle={escrow.title}
+                      scopeDescription={escrow.scopeDescription || escrow.title}
+                      deliverableUrl={escrow.deliveryProofUri}
+                    />
+                  )}
 
                   {/* Previous Revision Comments History */}
                   {escrow.reworkComments && escrow.reworkComments.length > 0 && (
@@ -783,7 +870,7 @@ export default function EscrowDetailPage() {
                 </div>
               ) : (
                 <div className="text-xs text-slate-500 italic leading-relaxed">
-                  No deliverable submitted yet. The Lead Freelancer will submit proof of completion (Figma link, GitHub PR, Google Drive URL, or PDF report).
+                  No deliverable submitted yet. The Lead Freelancer will submit proof of completion (Figma link, GitHub PR, Google Drive URL, attached posters/PDFs, or notes).
                 </div>
               )}
 
@@ -804,7 +891,7 @@ export default function EscrowDetailPage() {
                         </p>
                       </div>
                     ) : (
-                      <form onSubmit={handleDeliver} className="space-y-3">
+                      <form onSubmit={handleDeliver} className="space-y-4">
                         {/* Rework Notice for Freelancer */}
                         {escrow.isRevisionRequested && (
                           <div className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 space-y-2 text-xs">
@@ -813,91 +900,135 @@ export default function EscrowDetailPage() {
                               <span>Action Required: Client Requested Rework / Revision</span>
                             </div>
                             <p className="text-[11px] text-amber-800 leading-relaxed">
-                              Please review client comments above, update your proof URL or attach revised documents below, then click <strong>Submit Revised Deliverable</strong>.
+                              Please review client comments above, update your proof URL or attach revised documents/posters/notes below, then click <strong>Submit Revised Deliverable</strong>.
                             </p>
                           </div>
                         )}
 
-                        <label className="block text-xs font-extrabold text-slate-800">
-                          {escrow.isRevisionRequested ? 'Update Deliverable Proof URI' : 'Submit Proof of Work URI'}
-                        </label>
-                        
-                        {/* Helper type chips for freelance work */}
-                        <div className="flex flex-wrap gap-1.5 text-[10px]">
-                          <span className="text-slate-400 font-bold self-center mr-1">Formats:</span>
-                          {['https://figma.com/file/...', 'https://drive.google.com/...', 'https://github.com/org/repo/pull/1', 'https://canva.com/design/...'].map((format, idx) => (
-                            <button
-                              type="button"
-                              key={idx}
-                              onClick={() => setProofInput(format)}
-                              className="rounded-lg bg-white border border-slate-200 px-2 py-0.5 text-slate-600 hover:border-blue-400 hover:text-blue-600"
-                            >
-                              {format.split('/')[2]}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            required
-                            placeholder="Paste Google Drive, Figma, GitHub PR, or PDF link..."
-                            value={proofInput}
-                            onChange={(e) => handleProofChange(e.target.value)}
-                            className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none font-mono"
-                          />
-                          <button
-                            type="submit"
-                            disabled={loadingAction === 'deliver' || !proofInput.trim() || isUploadingDeliverableDoc}
-                            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 shadow-sm transition-all"
-                          >
-                            {loadingAction === 'deliver' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                            <span>{escrow.isRevisionRequested ? 'Submit Revised Deliverable' : 'Submit Proof'}</span>
-                          </button>
-                        </div>
-
-                        {/* Supporting PDF Document Attachment Input */}
-                        <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                        {/* 1. Optional Deliverable URI */}
+                        <div className="space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                              <Paperclip className="h-3.5 w-3.5 text-blue-600" />
-                              <span>Attach Supporting Document (PDF / Report / Asset Deliverables)</span>
+                            <label className="block text-xs font-extrabold text-slate-800">
+                              {escrow.isRevisionRequested ? 'Update Deliverable Proof URI' : 'Deliverable Proof Link / URI'}
                             </label>
-                            <span className="text-[10px] text-slate-400 font-semibold">Optional</span>
+                            <span className="text-[10px] text-slate-400 font-semibold">Optional if attaching files or notes</span>
+                          </div>
+                          
+                          {/* Helper type chips for freelance work */}
+                          <div className="flex flex-wrap gap-1.5 text-[10px]">
+                            <span className="text-slate-400 font-bold self-center mr-1">Formats:</span>
+                            {['https://figma.com/file/...', 'https://drive.google.com/...', 'https://github.com/org/repo/pull/1', 'https://canva.com/design/...'].map((format, idx) => (
+                              <button
+                                type="button"
+                                key={idx}
+                                onClick={() => setProofInput(format)}
+                                className="rounded-lg bg-white border border-slate-200 px-2 py-0.5 text-slate-600 hover:border-blue-400 hover:text-blue-600 cursor-pointer"
+                              >
+                                {format.split('/')[2]}
+                              </button>
+                            ))}
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-3">
-                            <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition-colors">
+                          <input
+                            type="text"
+                            placeholder="Paste Google Drive, Figma, GitHub PR, Canva, or Live Demo link (optional)..."
+                            value={proofInput}
+                            onChange={(e) => handleProofChange(e.target.value)}
+                            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none font-mono"
+                          />
+                        </div>
+
+                        {/* 2. Multi-File Deliverable Uploads */}
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                              <Paperclip className="h-4 w-4 text-blue-600" />
+                              <span>Attach Deliverables (Multiple PDFs, Posters, Images, Documents)</span>
+                            </label>
+                            <span className="text-[10px] text-slate-400 font-semibold">Multiple allowed</span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl border border-blue-300 bg-blue-50/80 hover:bg-blue-100 px-3.5 py-2 text-xs font-bold text-blue-700 shadow-2xs transition-colors">
                               <UploadCloud className="h-4 w-4 text-blue-600" />
-                              <span>{isUploadingDeliverableDoc ? 'Uploading...' : 'Browse PDF File'}</span>
+                              <span>{isUploadingDeliverableDoc ? 'Uploading...' : '+ Add Deliverable Files / Posters'}</span>
                               <input
                                 type="file"
-                                accept=".pdf"
-                                onChange={handleDeliverableDocUpload}
+                                multiple
+                                accept=".pdf,.png,.jpg,.jpeg,.svg,.webp,.doc,.docx,.zip"
+                                onChange={handleMultiFileUpload}
                                 className="hidden"
                                 disabled={isUploadingDeliverableDoc}
                               />
                             </label>
-
-                            {deliverableDocName ? (
-                              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
-                                <FileText className="h-3.5 w-3.5" />
-                                <span className="truncate max-w-[200px]">{deliverableDocName}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => { setDeliverableDocName(''); setDeliverableDocUrl(''); }}
-                                  className="text-rose-600 hover:text-rose-800 font-bold ml-1 text-sm leading-none"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ) : escrow.deliverableAttachmentName ? (
-                              <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg">
-                                <FileText className="h-3.5 w-3.5 text-slate-400" />
-                                <span className="truncate max-w-[200px]">Current: {escrow.deliverableAttachmentName}</span>
-                              </div>
-                            ) : null}
+                            <span className="text-[11px] text-slate-400">PDF, Posters (PNG/JPG), DOCX, ZIP supported</span>
                           </div>
+
+                          {/* Attached Files List */}
+                          {deliverableFiles.length > 0 && (
+                            <div className="space-y-1.5 pt-1">
+                              <div className="text-[11px] font-bold text-slate-600 uppercase">Attached Files ({deliverableFiles.length}):</div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {deliverableFiles.map((file, idx) => (
+                                  <div key={idx} className="flex items-center justify-between gap-2 rounded-xl bg-white border border-slate-200 px-3 py-2 text-xs">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <FileText className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                      <span className="truncate font-semibold text-slate-800" title={file.name}>{file.name}</span>
+                                      {file.size && <span className="text-[10px] text-slate-400 shrink-0">({(file.size / 1024).toFixed(0)}KB)</span>}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeDeliverableFile(idx)}
+                                      className="text-rose-500 hover:text-rose-700 font-bold p-1 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                                      title="Remove file"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 3. Deliverable Notes / Comments Area */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                              <MessageSquare className="h-3.5 w-3.5 text-blue-600" />
+                              <span>Deliverable Message / Notes for Client</span>
+                            </label>
+                            <span className="text-[10px] text-slate-400 font-semibold">Can be submitted with or without files</span>
+                          </div>
+                          <textarea
+                            rows={3}
+                            placeholder="Leave a message or explanation of the deliverables, changelog, or notes for the Client..."
+                            value={deliverableComment}
+                            onChange={(e) => setDeliverableComment(e.target.value)}
+                            className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 focus:border-blue-500 focus:outline-none resize-none placeholder:text-slate-400"
+                          />
+                        </div>
+
+                        {/* Submit Action Button */}
+                        <div className="flex items-center justify-between pt-2">
+                          <span className="text-[11px] text-slate-500">
+                            {proofInput.trim() || deliverableFiles.length > 0 || deliverableComment.trim()
+                              ? 'Ready to submit on Sui network'
+                              : 'Provide a link, attach file(s), or write notes above'}
+                          </span>
+
+                          <button
+                            type="submit"
+                            disabled={
+                              loadingAction === 'deliver' ||
+                              isUploadingDeliverableDoc ||
+                              (!proofInput.trim() && deliverableFiles.length === 0 && !deliverableDocUrl && !deliverableComment.trim())
+                            }
+                            className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-6 py-2.5 text-xs font-bold text-white shadow-sm transition-all cursor-pointer"
+                          >
+                            {loadingAction === 'deliver' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                            <span>{escrow.isRevisionRequested ? 'Submit Revised Deliverable' : 'Submit Deliverable'}</span>
+                          </button>
                         </div>
                       </form>
                     )

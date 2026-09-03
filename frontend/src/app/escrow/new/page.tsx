@@ -39,7 +39,7 @@ function Tooltip({ text }: { text: string }) {
 
 export default function NewEscrowPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loginWithDemo } = useAuth();
   const { createEscrow } = useEscrow();
 
   const [aiModalOpen, setAiModalOpen] = useState(false);
@@ -57,6 +57,49 @@ export default function NewEscrowPage() {
   const [attachedDocUrl, setAttachedDocUrl] = useState<string>('');
   const [attachedDocName, setAttachedDocName] = useState<string>('');
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+
+  // Role Gate: Only Clients can create and fund escrows
+  if (user && user.role !== 'client') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-xl border border-slate-200 space-y-5">
+          <div className="h-16 w-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mx-auto">
+            <Lock className="h-8 w-8" />
+          </div>
+          <div>
+            <h2 className="text-xl font-extrabold text-slate-900">Client Access Required</h2>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+              Escrow creation and contract funding is reserved for hiring Client accounts. You are currently logged in as <strong>{user.name} ({user.role === 'freelancer' ? 'Freelancer' : 'Team Member'})</strong>.
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-blue-50 border border-blue-200 p-4 text-xs text-blue-900 text-left space-y-2">
+            <p className="font-bold">Want to test creating an Escrow?</p>
+            <p className="text-blue-800 text-[11px]">
+              Switch persona to <strong>Alice (Client)</strong> to create contracts, lock testnet USDC deposits, and define multi-recipient payout splits.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 pt-2">
+            <button
+              onClick={() => {
+                loginWithDemo(PRESET_DEMO_ACCOUNTS[0]);
+              }}
+              className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 py-3 text-xs font-bold text-white shadow-sm transition-all cursor-pointer"
+            >
+              Switch to Alice (Client Persona)
+            </button>
+            <Link
+              href="/dashboard"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100 py-2.5 text-xs font-bold text-slate-700 transition-colors"
+            >
+              Return to My Assigned Contracts
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -61,6 +61,8 @@ interface AuthContextType {
   loginWithDemo: (account: UserAccount) => void;
   logout: () => void;
   claimFaucet: (amount?: number) => void;
+  topUpBalance: (amount: number, method?: string) => void;
+  resetBalance: (toAmount?: number) => void;
   resetDemoState: () => void;
   deductBalance: (amount: number, address?: string) => void;
   creditBalance: (amount: number, address?: string) => void;
@@ -269,6 +271,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const topUpBalance = (amount: number, method = 'Testnet Faucet') => {
+    if (!user?.address || amount <= 0) return;
+    const addr = user.address.toLowerCase();
+    setBalances((prev) => {
+      const current = prev[addr] ?? DEFAULT_INITIAL_BALANCES[addr] ?? 0;
+      const updated = current + amount;
+      const newBalances = { ...prev, [addr]: updated };
+      localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(newBalances));
+      return newBalances;
+    });
+    showNotification(`💳 +$${amount.toLocaleString()} USDC added to your wallet via ${method}!`);
+  };
+
+  const resetBalance = (toAmount = 0) => {
+    if (!user?.address) return;
+    const addr = user.address.toLowerCase();
+    setBalances((prev) => {
+      const newBalances = { ...prev, [addr]: toAmount };
+      localStorage.setItem('suipact_wallet_balances_v2', JSON.stringify(newBalances));
+      return newBalances;
+    });
+    showNotification(toAmount === 0 ? '🔄 Wallet balance reset to $0.00 USDC.' : `🔄 Wallet balance set to $${toAmount.toLocaleString()} USDC.`);
+  };
+
   const userAddrClean = user?.address?.toLowerCase() || '';
   const activeBalance = user
     ? (balances[userAddrClean] ?? DEFAULT_INITIAL_BALANCES[userAddrClean] ?? (user.role === 'client' ? 2500 : 250))
@@ -285,6 +311,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithDemo,
         logout,
         claimFaucet,
+        topUpBalance,
+        resetBalance,
         resetDemoState,
         deductBalance,
         creditBalance,

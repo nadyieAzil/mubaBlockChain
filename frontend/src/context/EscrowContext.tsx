@@ -18,6 +18,14 @@ export interface ReworkNote {
   timestamp: string;
 }
 
+export interface DeliverableFile {
+  name: string;
+  url: string;
+  size?: number;
+  type?: string;
+  uploadedAt?: string;
+}
+
 export interface EscrowItem {
   id: string;
   client: string;
@@ -38,6 +46,8 @@ export interface EscrowItem {
   attachedDocumentName?: string;
   deliverableAttachmentUrl?: string;
   deliverableAttachmentName?: string;
+  deliverableFiles?: DeliverableFile[];
+  deliverableComment?: string;
   agreementStatus: 'pending' | 'accepted' | 'rejected' | 'negotiating' | 'client_approved';
   agreementRejectReason?: string;
   negotiationNotes?: string;
@@ -135,7 +145,14 @@ interface EscrowContextType {
   escrows: EscrowItem[];
   getEscrowById: (id: string) => EscrowItem | undefined;
   createEscrow: (params: CreateEscrowParams) => Promise<EscrowItem>;
-  submitDeliverable: (escrowId: string, proofUri: string, attachmentUrl?: string, attachmentName?: string) => Promise<void>;
+  submitDeliverable: (
+    escrowId: string,
+    proofUri?: string,
+    attachmentUrl?: string,
+    attachmentName?: string,
+    deliverableFiles?: DeliverableFile[],
+    deliverableComment?: string
+  ) => Promise<void>;
   approveAndRelease: (escrowId: string) => Promise<{ digest: string }>;
   refundClient: (escrowId: string) => Promise<{ digest: string }>;
   raiseDispute: (escrowId: string) => Promise<void>;
@@ -419,9 +436,11 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // ── Submit Deliverable ───────────────────────────────────────────────────
   const submitDeliverable = async (
     escrowId: string,
-    proofUri: string,
+    proofUri = '',
     attachmentUrl?: string,
-    attachmentName?: string
+    attachmentName?: string,
+    deliverableFiles?: DeliverableFile[],
+    deliverableComment?: string
   ) => {
     const target = escrows.find(e => e.id === escrowId);
     if (!target) throw new Error('Escrow order not found.');
@@ -432,12 +451,18 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       );
     }
 
+    const effectiveUri =
+      proofUri.trim() ||
+      target.deliveryProofUri ||
+      (deliverableFiles && deliverableFiles.length > 0 ? deliverableFiles[0].name : '') ||
+      (deliverableComment ? 'Comment / Notes update submitted.' : 'Deliverable files submitted.');
+
     let digest: string;
     let isReal = false;
 
     if (target.isOnChain) {
       try {
-        const result = await callMoveFunction('submit_deliverable_entry', [escrowId, proofUri]);
+        const result = await callMoveFunction('submit_deliverable_entry', [escrowId, effectiveUri]);
         digest = result.digest;
         isReal = true;
       } catch (err: any) {
@@ -451,19 +476,29 @@ export const EscrowProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const updated = escrows.map(e => {
       if (e.id === escrowId) {
+        const existingFiles = e.deliverableFiles || [];
+        const newFiles = deliverableFiles !== undefined ? deliverableFiles : existingFiles;
+        const finalAttachmentUrl = attachmentUrl !== undefined ? attachmentUrl : (newFiles.length > 0 ? newFiles[0].url : e.deliverableAttachmentUrl);
+        const finalAttachmentName = attachmentName !== undefined ? attachmentName : (newFiles.length > 0 ? newFiles[0].name : e.deliverableAttachmentName);
+
+        const fileSummary = newFiles.length > 0 ? ` (${newFiles.length} file${newFiles.length > 1 ? 's' : ''} attached)` : '';
+        const commentSummary = deliverableComment ? ` [Notes: "${deliverableComment.slice(0, 40)}${deliverableComment.length > 40 ? '...' : ''}"]` : '';
+
         return {
           ...e,
           status: STATUS_CODES.DELIVERED,
           isRevisionRequested: false,
-          deliveryProofUri: proofUri,
-          deliverableAttachmentUrl: attachmentUrl !== undefined ? attachmentUrl : e.deliverableAttachmentUrl,
-          deliverableAttachmentName: attachmentName !== undefined ? attachmentName : e.deliverableAttachmentName,
+          deliveryProofUri: effectiveUri,
+          deliverableAttachmentUrl: finalAttachmentUrl,
+          deliverableAttachmentName: finalAttachmentName,
+          deliverableFiles: newFiles,
+          deliverableComment: deliverableComment !== undefined ? deliverableComment : e.deliverableComment,
           txHistory: [
             ...e.txHistory,
             {
               action: wasRevision
-                ? `Revised Deliverable Submitted: "${proofUri}"${attachmentName ? ` with ${attachmentName}` : ''}`
-                : `Deliverable Submitted: "${proofUri}"${attachmentName ? ` with ${attachmentName}` : ''}`,
+                ? `Revised Deliverable Submitted: "${effectiveUri}"${fileSummary}${commentSummary}`
+                : `Deliverable Submitted: "${effectiveUri}"${fileSummary}${commentSummary}`,
               digest,
               timestamp: new Date().toISOString(),
               isReal,
