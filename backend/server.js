@@ -89,6 +89,57 @@ const faucetLimiter = createRateLimiter({
   message: 'Faucet rate limit reached. Please wait before requesting more test tokens.',
 });
 
+// ── 10 Free Sponsored Transactions per Month Quota Engine ──────────────────
+const MONTHLY_SPONSOR_LIMIT = 10;
+const sponsorQuotaMap = new Map(); // Key: identifier (wallet or IP), Value: { count: number, resetAt: number }
+
+function checkAndConsumeSponsorQuota(identifier) {
+  const now = Date.now();
+  const windowMs = 30 * 24 * 60 * 60 * 1000; // 30-day quota window
+  const key = (identifier || 'anonymous').toLowerCase();
+  let record = sponsorQuotaMap.get(key);
+
+  if (!record || now > record.resetAt) {
+    record = { count: 0, resetAt: now + windowMs };
+  }
+
+  if (record.count >= MONTHLY_SPONSOR_LIMIT) {
+    return {
+      allowed: false,
+      count: record.count,
+      limit: MONTHLY_SPONSOR_LIMIT,
+      remaining: 0,
+      resetAt: record.resetAt,
+    };
+  }
+
+  record.count += 1;
+  sponsorQuotaMap.set(key, record);
+  return {
+    allowed: true,
+    count: record.count,
+    limit: MONTHLY_SPONSOR_LIMIT,
+    remaining: MONTHLY_SPONSOR_LIMIT - record.count,
+    resetAt: record.resetAt,
+  };
+}
+
+function getSponsorQuotaStatus(identifier) {
+  const now = Date.now();
+  const windowMs = 30 * 24 * 60 * 60 * 1000;
+  const key = (identifier || 'anonymous').toLowerCase();
+  let record = sponsorQuotaMap.get(key);
+  if (!record || now > record.resetAt) {
+    return { count: 0, limit: MONTHLY_SPONSOR_LIMIT, remaining: MONTHLY_SPONSOR_LIMIT, resetAt: now + windowMs };
+  }
+  return {
+    count: record.count,
+    limit: MONTHLY_SPONSOR_LIMIT,
+    remaining: Math.max(0, MONTHLY_SPONSOR_LIMIT - record.count),
+    resetAt: record.resetAt,
+  };
+}
+
 function sanitizeString(str, maxLength = 1000) {
   if (typeof str !== 'string') return '';
   return str.trim().slice(0, maxLength);
@@ -237,6 +288,7 @@ app.get('/api/health', async (req, res) => {
       network: deployment.network,
       gasBalanceMist: gasBalance,
       gasBalanceSui: (Number(gasBalance) / 1e9).toFixed(4),
+      monthlyQuotaLimit: MONTHLY_SPONSOR_LIMIT,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -244,12 +296,30 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// ── Check Sponsor Quota Endpoint ───────────────────────────────────────────
+app.get('/api/sponsor/quota', (req, res) => {
+  const address = req.query.address || req.headers['x-forwarded-for'] || req.ip || 'anonymous';
+  const status = getSponsorQuotaStatus(address);
+  res.json(status);
+});
+
 // ── Core: Execute Move Function ───────────────────────────────────────────
 // This is the main endpoint that wires the frontend to real on-chain calls.
 // The sponsor keypair acts as BOTH user AND gas payer for demo-mode personas.
 app.post('/api/execute-move', relayerLimiter, async (req, res) => {
   try {
-    const { functionName, typeArgs = [], args = [] } = req.body;
+    const { functionName, typeArgs = [], args = [], userAddress } = req.body;
+
+    // Check 10 sponsored transactions quota per user
+    const quotaUser = userAddress || req.ip || 'anonymous';
+    const quotaCheck = checkAndConsumeSponsorQuota(quotaUser);
+    if (!quotaCheck.allowed) {
+      return res.status(429).json({
+        error: `Monthly free gas limit (${MONTHLY_SPONSOR_LIMIT} transactions) reached for this account. Please connect your Sui Wallet to pay standard gas (~0.002 SUI).`,
+        quotaExceeded: true,
+        quota: quotaCheck,
+      });
+    }
 
     if (!functionName) {
       return res.status(400).json({ error: 'Missing functionName' });

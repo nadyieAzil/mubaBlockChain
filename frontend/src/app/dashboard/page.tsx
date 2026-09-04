@@ -10,6 +10,7 @@ import { STATUS_CODES } from '@/config/sui';
 import { StatusBadge } from '@/components/StatusBadge';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { OnboardingTour } from '@/components/OnboardingTour';
+import { EcosystemPartnerBanner } from '@/components/EcosystemPartnerBanner';
 import { formatUSDC, formatAddress, formatDate } from '@/lib/utils';
 import {
   Plus, Search, Lock, ArrowUpRight, Users, CheckCircle2, Coins,
@@ -487,6 +488,11 @@ export default function DashboardPage() {
             )}
           </div>
         )}
+
+        {/* Ecosystem Partner Widget */}
+        <div className="pt-4">
+          <EcosystemPartnerBanner variant="card" />
+        </div>
       </div>
     </div>
   );
