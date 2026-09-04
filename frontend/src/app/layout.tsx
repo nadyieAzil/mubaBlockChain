@@ -9,6 +9,7 @@ import { Toast } from '@/components/Toast';
 import { DemoSandboxBar } from '@/components/DemoSandboxBar';
 import { EcosystemPartnerBanner } from '@/components/EcosystemPartnerBanner';
 
+
 export const metadata: Metadata = {
   title: 'SuiPact — Zero-Gas Stablecoin Escrow & Atomic Split Payouts on Sui',
   description:
@@ -34,6 +35,7 @@ export default function RootLayout({
               <WalletModal />
               <Toast />
               <DemoSandboxBar />
+
               {/* Footer with Ecosystem Partner Sponsorship Banner */}
               <footer className="bg-blue-dark-gradient border-t border-blue-900/50 py-8 mt-0 text-xs text-blue-300">
                 <div className="mx-auto max-w-7xl px-4 space-y-6">
