@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { Navbar } from '@/components/Navbar';
+import { LiveSuiStats } from '@/components/LiveSuiStats';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { EcosystemPartnerBanner } from '@/components/EcosystemPartnerBanner';
 import {
@@ -48,61 +50,221 @@ export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
   const [activeSlide, setActiveSlide] = useState<string>('overview');
 
-  useEffect(() => setMounted(true), []);
-
   const pitchSections = [
-    { id: 'problem-objective', label: '01. Problem & Objective', icon: Target },
-    { id: 'motivation-challenges', label: '02. Motivation & Challenges', icon: Rocket },
-    { id: 'business-model', label: '03. Business Model & Ads', icon: DollarSign },
-    { id: 'tech-stack', label: '04. Tech Stack & Track 01', icon: Cpu },
-    { id: 'architecture-concept', label: '05. Overall Architecture', icon: Layers },
+    { id: 'overview', num: '00', label: 'Overview & Hero', icon: Sparkles, desc: 'Zero-Gas Escrow & Atomic Splits' },
+    { id: 'problem-objective', num: '01', label: 'Problem & Objective', icon: Target, desc: '20% Fee Trap & Disjoint Splits' },
+    { id: 'motivation-challenges', num: '02', label: 'Motivation & Challenges', icon: Rocket, desc: 'Gas Tokens, zkLogin & PTBs' },
+    { id: 'business-model', num: '03', label: 'Business & Ads Model', icon: DollarSign, desc: 'Ecosystem Sponsorships & Unit Econ' },
+    { id: 'tech-stack', num: '04', label: 'Tech Stack & Track 01', icon: Cpu, desc: 'Sui Move v2 & Multi-LLM AI' },
+    { id: 'architecture-concept', num: '05', label: 'Overall Architecture', icon: Layers, desc: '5-Stage Autonomous Lifecycle' },
+    { id: 'savings-calculator', num: '06', label: 'Interactive ROI Calc', icon: BarChart3, desc: 'Real Savings vs. Web2 Freelancing' },
+    { id: 'evaluation', num: '07', label: 'Judge Evaluation & Demo', icon: Award, desc: 'Live Sui Testnet Demo & zkLogin' },
   ];
+
+  useEffect(() => {
+    setMounted(true);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSlide(entry.target.id);
+          }
+        });
+      },
+      {
+        rootMargin: '-15% 0px -40% 0px',
+        threshold: 0.1,
+      }
+    );
+
+    pitchSections.forEach((sec) => {
+      const el = document.getElementById(sec.id);
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      pitchSections.forEach((sec) => {
+        const el = document.getElementById(sec.id);
+        if (el) observer.unobserve(el);
+      });
+    };
+  }, []);
 
   const scrollToSection = (id: string) => {
     setActiveSlide(id);
+    if (id === 'overview') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Offset brings the section header cleanly to the top of the viewport
+      const yOffset = -16;
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50">
+  const currentSectionIndex = pitchSections.findIndex((s) => s.id === activeSlide);
+  const progressPercent = Math.round(((Math.max(0, currentSectionIndex) + 1) / pitchSections.length) * 100);
 
-      {/* ── Floating / Sticky Pitch Deck Quick Navigator ───────────── */}
-      <div className="sticky top-16 z-30 bg-slate-900/90 backdrop-blur-md border-b border-blue-900/60 shadow-lg hidden md:block">
-        <div className="mx-auto max-w-6xl px-4 flex items-center justify-between py-2.5">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-yellow-300">
-            <Award className="h-4 w-4" />
-            <span>Hackathon Pitch Deck</span>
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+
+      {/* ── Left Side Panel Navigation (Full to Top, Sticky & Clickable) ──── */}
+      <aside className="hidden lg:flex w-72 xl:w-80 shrink-0 sticky top-0 h-screen flex-col justify-between border-r border-[#1b264f]/80 bg-[#0b132b] text-white z-40 shadow-2xl overflow-y-auto">
+        {/* Panel Header */}
+        <div className="p-5 border-b border-[#1b264f] space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-yellow-400/20 border border-yellow-300/30 text-yellow-300 shadow-sm">
+                <Award className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <span className="text-xs font-black tracking-tight text-white block uppercase">
+                  Pitch Deck Nav
+                </span>
+                <span className="text-[10px] text-blue-300 font-semibold block">
+                  MUBA Sui Track 01
+                </span>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-[9.5px] font-black text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Live Move
+            </span>
           </div>
-          <div className="flex items-center gap-1">
-            {pitchSections.map((sec) => (
+
+          {/* Progress bar */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
+              <span>Pitch Flow</span>
+              <span className="text-yellow-300 font-mono">{currentSectionIndex >= 0 ? `${currentSectionIndex + 1}/${pitchSections.length}` : '0/8'} ({progressPercent}%)</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-[#141f42] overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-yellow-400 via-blue-500 to-cyan-400 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Clickable Navigation Links */}
+        <nav className="p-3 space-y-1.5 flex-1 overflow-y-auto">
+          {pitchSections.map((sec) => {
+            const isActive = activeSlide === sec.id;
+            const Icon = sec.icon;
+            return (
               <button
                 key={sec.id}
                 onClick={() => scrollToSection(sec.id)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                  activeSlide === sec.id
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-white/10'
+                className={`w-full flex items-start gap-3 p-2.5 rounded-2xl text-left transition-all cursor-pointer group relative ${
+                  isActive
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-white/20'
+                    : 'text-slate-300 hover:bg-[#131d3f]/60 hover:text-white'
                 }`}
               >
-                <sec.icon className="h-3.5 w-3.5" />
-                <span>{sec.label}</span>
+                {/* Active Indicator Bar */}
+                {isActive && (
+                  <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-yellow-300 shadow-sm" />
+                )}
+
+                {/* Number Badge / Icon */}
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-mono text-xs font-black transition-colors ${
+                    isActive
+                      ? 'bg-white/20 text-white border border-white/30'
+                      : 'bg-[#141f42] border border-[#223366] text-slate-400 group-hover:text-yellow-300 group-hover:border-yellow-300/30'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+
+                {/* Text Labels */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-mono font-extrabold ${isActive ? 'text-yellow-300' : 'text-slate-500 group-hover:text-slate-400'}`}>
+                      {sec.num}
+                    </span>
+                    <span className="text-xs font-bold truncate leading-snug">
+                      {sec.label}
+                    </span>
+                  </div>
+                  <p className={`text-[10.5px] truncate mt-0.5 leading-tight ${isActive ? 'text-blue-100' : 'text-slate-500 group-hover:text-slate-400'}`}>
+                    {sec.desc}
+                  </p>
+                </div>
               </button>
-            ))}
-          </div>
+            );
+          })}
+        </nav>
+
+        {/* Panel Footer Actions */}
+        <div className="p-4 border-t border-[#1b264f] bg-[#080e22]/90 space-y-2.5">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 px-3 py-1 text-xs font-black transition-all"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-slate-950 py-2.5 px-3 text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
           >
-            Launch DApp <ArrowRight className="h-3 w-3" />
+            <span>Launch DApp Demo</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+
+          <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+            <a
+              href={getSuiVisionPackageUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-blue-300 hover:text-white transition-colors"
+            >
+              <span>SuiVision v2</span>
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+            <span className="text-emerald-400 font-bold">10 Free Tx/Mo</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main Content Column (Navbar + Stats + Pitch Content on Right) ─ */}
+      <div className="flex-1 min-w-0 flex flex-col">
+
+        {/* Top Header on Right: Scrolls away naturally to the top when scrolling down */}
+        <div id="overview-top" className="print:hidden relative z-30 shadow-md">
+          <Navbar sticky={false} />
+          <LiveSuiStats />
+        </div>
+
+        {/* Mobile Horizontal Quick Bar (< lg screens) */}
+        <div className="lg:hidden sticky top-0 z-20 bg-slate-950/95 backdrop-blur-md border-b border-blue-900/60 p-2 overflow-x-auto flex items-center gap-1.5 scrollbar-none">
+          <div className="flex items-center gap-1.5 px-2 text-[10px] font-black uppercase text-yellow-300 shrink-0">
+            <Award className="h-3.5 w-3.5" />
+            <span>Deck:</span>
+          </div>
+          {pitchSections.map((sec) => (
+            <button
+              key={sec.id}
+              onClick={() => scrollToSection(sec.id)}
+              className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                activeSlide === sec.id
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-300 hover:text-white bg-white/5'
+              }`}
+            >
+              <span>{sec.num}</span>
+              <span className="hidden sm:inline">{sec.label.split('.')[1] || sec.label}</span>
+            </button>
+          ))}
+          <Link
+            href="/dashboard"
+            className="shrink-0 ml-auto inline-flex items-center gap-1 rounded-lg bg-yellow-400 text-slate-950 px-2.5 py-1 text-[11px] font-black"
+          >
+            Launch <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
-      </div>
 
-      {/* ── Hero Section ─────────────────────────────── */}
-      <section className="relative overflow-hidden bg-blue-gradient pt-16 pb-24 text-white">
+        {/* ── Hero Section ─────────────────────────────── */}
+        <section id="overview" className="scroll-mt-0 relative overflow-hidden bg-blue-gradient pt-16 pb-24 text-white">
         {/* Animated background orbs */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-blue-500/20 blur-3xl animate-orb" />
@@ -209,7 +371,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PILLAR 1: PROBLEM STATEMENT & PROJECT OBJECTIVE ─────────── */}
-      <section id="problem-objective" className="scroll-mt-24 py-20 bg-white border-b border-slate-200">
+      <section id="problem-objective" className="scroll-mt-0 py-20 bg-white border-b border-slate-200">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-blue-600 mb-2">
             <Target className="h-4 w-4" /> Pitch Pillar 01
@@ -294,7 +456,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PILLAR 2: MOTIVATION & CHALLENGES ───────────────────────── */}
-      <section id="motivation-challenges" className="scroll-mt-24 py-20 bg-slate-50 border-b border-slate-200">
+      <section id="motivation-challenges" className="scroll-mt-0 py-20 bg-slate-50 border-b border-slate-200">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-violet-600 mb-2">
             <Rocket className="h-4 w-4" /> Pitch Pillar 02
@@ -363,7 +525,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PILLAR 3: COMMERCIALISATION & BUSINESS MODEL ─────────────── */}
-      <section id="business-model" className="scroll-mt-24 py-20 bg-white border-b border-slate-200">
+      <section id="business-model" className="scroll-mt-0 py-20 bg-white border-b border-slate-200">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-600 mb-2">
             <DollarSign className="h-4 w-4" /> Pitch Pillar 03
@@ -463,7 +625,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PILLAR 4: TECH STACK & TRACK CHOSEN ─────────────────────── */}
-      <section id="tech-stack" className="scroll-mt-24 py-20 bg-slate-50 border-b border-slate-200">
+      <section id="tech-stack" className="scroll-mt-0 py-20 bg-slate-50 border-b border-slate-200">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-cyan-600 mb-2">
             <Cpu className="h-4 w-4" /> Pitch Pillar 04
@@ -556,7 +718,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PILLAR 5: OVERALL CONCEPT & ARCHITECTURAL WORKFLOW ───────── */}
-      <section id="architecture-concept" className="scroll-mt-24 py-20 bg-white border-b border-slate-200">
+      <section id="architecture-concept" className="scroll-mt-0 py-20 bg-white border-b border-slate-200">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-600 mb-2">
             <Layers className="h-4 w-4" /> Pitch Pillar 05
@@ -601,7 +763,7 @@ export default function LandingPage() {
       <GasSavingsCalculator />
 
       {/* ── Final Hackathon CTA ──────────────────────── */}
-      <section className="bg-blue-gradient py-20 text-white text-center">
+      <section id="evaluation" className="scroll-mt-0 bg-blue-gradient py-20 text-white text-center">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-yellow-300/40 bg-yellow-400/20 px-4 py-1.5 text-xs font-black text-yellow-300">
             <Award className="h-4 w-4" /> Ready for Judge Evaluation
@@ -632,6 +794,30 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Footer inside right column */}
+      <footer className="bg-blue-dark-gradient border-t border-blue-900/50 py-8 mt-0 text-xs text-blue-300">
+        <div className="mx-auto max-w-7xl px-4 space-y-6">
+          <EcosystemPartnerBanner variant="banner" />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+            <div className="flex items-center gap-2">
+              <img src="/logo.png" alt="SuiPact" className="h-5 w-5 object-contain opacity-80" />
+              <span className="font-bold text-white">SuiPact</span>
+              <span className="text-blue-400">— MUBA Blockchain Hackathon 2026 · Sui Track 01</span>
+            </div>
+            <div className="flex items-center gap-3 text-blue-400">
+              <span>Sui Move Testnet</span>
+              <span className="text-blue-600">·</span>
+              <span>Google zkLogin</span>
+              <span className="text-blue-600">·</span>
+              <span>10 Free Sponsored Tx/Mo</span>
+              <span className="text-blue-600">·</span>
+              <span>9/9 Tests Passing</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+      </div>
     </div>
   );
 }
@@ -650,7 +836,7 @@ function GasSavingsCalculator() {
   const savings = totalTraditional.toFixed(2);
 
   return (
-    <section className="bg-slate-50 py-20 border-b border-slate-200">
+    <section id="savings-calculator" className="scroll-mt-0 bg-slate-50 py-20 border-b border-slate-200">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 mb-4">

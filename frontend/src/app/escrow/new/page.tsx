@@ -89,6 +89,22 @@ export default function NewEscrowPage() {
   const [attachedDocName, setAttachedDocName] = useState<string>('');
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
+  // Pre-fill from query parameters if navigated from Services Marketplace
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const qTitle = params.get('title');
+      const qAmount = params.get('amount');
+      const qFreelancer = params.get('freelancer');
+
+      if (qTitle) setTitle(qTitle);
+      if (qAmount && !isNaN(Number(qAmount))) setTotalAmount(Number(qAmount));
+      if (qFreelancer) {
+        setDescription(`Hiring ${qFreelancer} via SuiPact Services Marketplace for ${qTitle || 'custom service'}.`);
+      }
+    }
+  }, []);
+
   // Role Gate: Only Clients can create and fund escrows
   if (user && user.role !== 'client') {
     return (

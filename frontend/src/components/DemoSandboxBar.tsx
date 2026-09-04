@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth, PRESET_DEMO_ACCOUNTS } from '@/context/AuthContext';
 import { useEscrow } from '@/context/EscrowContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Sparkles,
   RotateCcw,
@@ -19,11 +19,17 @@ import {
 } from 'lucide-react';
 
 export const DemoSandboxBar: React.FC = () => {
+  const pathname = usePathname();
   const { user, loginWithDemo, resetDemoState } = useAuth();
   const { resetEscrows } = useEscrow();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
+
+  // Hide the Demo Sandbox Controller only on the landing page ('/')
+  if (pathname === '/') {
+    return null;
+  }
 
   const handleStartDemoFlow = () => {
     // 1. Switch to Alice (Client)
@@ -90,7 +96,7 @@ export const DemoSandboxBar: React.FC = () => {
         {isOpen && (
           <div className="p-4 space-y-3 text-xs">
             <p className="text-[11px] text-slate-300 leading-snug">
-              Uji peranan antara <strong>Client</strong>, <strong>Lead Freelancer</strong>, &amp; <strong>Team Member (Sub-freelancer)</strong> untuk menguji ketelusan dispute.
+              Switch between <strong>Client</strong>, <strong>Lead Freelancer</strong>, &amp; <strong>Team Member</strong> to test role-based escrow flow &amp; dispute transparency.
             </p>
 
             {/* Quick Switch Persona Buttons (3 Roles) */}
@@ -118,7 +124,7 @@ export const DemoSandboxBar: React.FC = () => {
                 }`}
               >
                 <Crown className="h-3 w-3 text-amber-400 icon-hover-bounce shrink-0" />
-                <span className="truncate">Bob (Lead Free)</span>
+                <span className="truncate">Bob (Lead)</span>
               </button>
 
               <button
@@ -140,21 +146,21 @@ export const DemoSandboxBar: React.FC = () => {
               <button
                 type="button"
                 onClick={handleStartDemoFlow}
-                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 py-2 font-extrabold text-white shadow-sm transition-all"
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 py-2 font-extrabold text-white shadow-sm transition-all cursor-pointer"
               >
                 <Play className="h-3.5 w-3.5 fill-white" />
-                <span>Mula Demo Flow</span>
+                <span>Start Demo Flow</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleFullReset}
                 disabled={isResetting}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-900/60 hover:bg-rose-800 border border-rose-700/80 px-3 py-2 font-bold text-rose-200 transition-all disabled:opacity-50"
-                title="Reset semua baki & kontrak ke nilai asal"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-900/60 hover:bg-rose-800 border border-rose-700/80 px-3 py-2 font-bold text-rose-200 transition-all disabled:opacity-50 cursor-pointer"
+                title="Reset all balances & contracts to default state"
               >
                 <RotateCcw className={`h-3.5 w-3.5 ${isResetting ? 'animate-spin' : ''}`} />
-                <span>Reset Semua</span>
+                <span>Reset All</span>
               </button>
             </div>
           </div>

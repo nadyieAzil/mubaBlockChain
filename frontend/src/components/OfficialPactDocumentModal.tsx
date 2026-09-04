@@ -367,40 +367,40 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
             </div>
 
             {/* Document Title Banner */}
-            <div className="border border-black py-0.5 px-2 text-center bg-slate-100 font-bold uppercase tracking-wider text-[11px]">
-              PERJANJIAN PERKHIDMATAN &amp; PESANAN ESKROW RASMI
+            <div className="border border-black py-1 px-2 text-center bg-slate-100 font-bold uppercase tracking-wider text-[11px]">
+              OFFICIAL SERVICE AGREEMENT &amp; ESCROW PAYMENT ORDER
               <div className="text-[9px] font-normal lowercase tracking-normal text-slate-700">
-                (Official Sui Smart Contract Service Agreement &amp; Payment Order)
+                (Official Sui Smart Contract Escrow Order &amp; Milestone Agreement)
               </div>
             </div>
 
             {/* Section 1: Contract Metadata Table */}
             <div className="space-y-0.5">
               <div className="font-bold uppercase text-[9.5px] border-b border-black pb-0.5">
-                1. MAKLUMAT KONTRAK &amp; PIHAK TERLIBAT (CONTRACT PARTIES)
+                1. CONTRACT DETAILS &amp; INVOLVED PARTIES
               </div>
               <table className="w-full border-collapse border border-black text-[9.5px]">
                 <tbody>
                   <tr className="border-b border-black">
-                    <td className="w-1/3 p-1 bg-slate-100 font-bold border-r border-black">Nama Projek / Tajuk</td>
+                    <td className="w-1/3 p-1 bg-slate-100 font-bold border-r border-black">Project Title / Scope</td>
                     <td className="p-1 font-bold">{escrow.title}</td>
                   </tr>
                   <tr className="border-b border-black">
-                    <td className="p-1 bg-slate-100 font-bold border-r border-black">Client (Majikan)</td>
+                    <td className="p-1 bg-slate-100 font-bold border-r border-black">Client (Principal)</td>
                     <td className="p-1">
                       <span className="font-bold">{escrow.clientName || 'Authorized Client'}</span>
                       <div className="font-mono text-[8px] text-slate-700">{escrow.client}</div>
                     </td>
                   </tr>
                   <tr className="border-b border-black">
-                    <td className="p-1 bg-slate-100 font-bold border-r border-black">Lead Freelancer (Ketua Pelaksana)</td>
+                    <td className="p-1 bg-slate-100 font-bold border-r border-black">Lead Freelancer (Contractor)</td>
                     <td className="p-1">
                       <span className="font-bold">{escrow.freelancerName || 'Designated Lead Freelancer'}</span>
                       <div className="font-mono text-[8px] text-slate-700">{escrow.leadFreelancer}</div>
                     </td>
                   </tr>
                   <tr>
-                    <td className="p-1 bg-slate-100 font-bold border-r border-black">Jumlah Dana Eskrow Terkunci</td>
+                    <td className="p-1 bg-slate-100 font-bold border-r border-black">Total Locked Escrow Deposit</td>
                     <td className="p-1 font-bold text-[11px]">
                       {formatUSDC(escrow.totalAmount)} USDC (100% Locked on Sui)
                     </td>
@@ -412,13 +412,13 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
             {/* Section 2: Project Scope & Deliverables */}
             <div className="space-y-0.5">
               <div className="font-bold uppercase text-[9.5px] border-b border-black pb-0.5">
-                2. SKOP KERJA &amp; SPESIFIKASI SERAHAN (SCOPE &amp; DELIVERABLES)
+                2. SCOPE OF WORK &amp; DELIVERABLES SPECIFICATION
               </div>
               <div className="border border-black p-1.5 text-[9.5px] leading-relaxed bg-slate-50">
-                <p>{escrow.scopeDescription || 'Spesifikasi kerja merangkumi penyediaan reka bentuk, kod pengaturcaraan, dan dokumen serahan rasmi mengikut persetujuan dua pihak.'}</p>
+                <p>{escrow.scopeDescription || 'Work specifications include UI design, smart contract coding, and official deliverable verification as mutually agreed upon.'}</p>
                 {escrow.attachedDocumentName && (
                   <div className="mt-1 pt-1 border-t border-dashed border-slate-400 font-bold text-[8.5px]">
-                    Lampiran Dokumen Spesifikasi: {escrow.attachedDocumentName}
+                    Attached Specification Document: {escrow.attachedDocumentName}
                   </div>
                 )}
               </div>
@@ -427,16 +427,16 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
             {/* Section 3: Payment Split Schedule Table */}
             <div className="space-y-0.5">
               <div className="font-bold uppercase text-[9.5px] border-b border-black pb-0.5">
-                3. JADUAL AGIHAN BAYARAN BERKUMPULAN (TEAM SPLIT DISTRIBUTION SCHEDULE)
+                3. TEAM SPLIT &amp; PAYOUT DISTRIBUTION SCHEDULE
               </div>
               <table className="w-full border-collapse border border-black text-[9px] text-left">
                 <thead>
                   <tr className="bg-slate-100 border-b border-black font-bold">
-                    <th className="p-1 border-r border-black w-7 text-center">Bil</th>
-                    <th className="p-1 border-r border-black">Penerima &amp; Peranan</th>
-                    <th className="p-1 border-r border-black font-mono">Alamat Sui Testnet</th>
-                    <th className="p-1 border-r border-black text-center w-14">Nisbah %</th>
-                    <th className="p-1 text-right w-20">Jumlah (USDC)</th>
+                    <th className="p-1 border-r border-black w-7 text-center">No.</th>
+                    <th className="p-1 border-r border-black">Recipient &amp; Role</th>
+                    <th className="p-1 border-r border-black font-mono">Sui Testnet Address</th>
+                    <th className="p-1 border-r border-black text-center w-14">Ratio %</th>
+                    <th className="p-1 text-right w-20">Amount (USDC)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -446,7 +446,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
                     return (
                       <tr key={i} className="border-b border-black">
                         <td className="p-0.5 border-r border-black text-center">{i + 1}</td>
-                        <td className="p-0.5 border-r border-black font-bold">{r.name || `Penerima ${i + 1}`}</td>
+                        <td className="p-0.5 border-r border-black font-bold">{r.name || `Recipient ${i + 1}`}</td>
                         <td className="p-0.5 border-r border-black font-mono text-[8px]">{formatAddress(r.recipient, 8)}</td>
                         <td className="p-0.5 border-r border-black text-center font-bold">{pct}%</td>
                         <td className="p-0.5 text-right font-bold font-mono">${payout.toFixed(2)}</td>
@@ -454,7 +454,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
                     );
                   })}
                   <tr className="bg-slate-100 font-bold border-t border-black">
-                    <td colSpan={3} className="p-0.5 border-r border-black text-right uppercase">Jumlah Keseluruhan (Total Contract Value):</td>
+                    <td colSpan={3} className="p-0.5 border-r border-black text-right uppercase">Total Contract Escrow Value:</td>
                     <td className="p-0.5 border-r border-black text-center">100.0%</td>
                     <td className="p-0.5 text-right font-mono text-[10px]">{formatUSDC(escrow.totalAmount)}</td>
                   </tr>
@@ -465,32 +465,32 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
             {/* Section 4: Key Legal & Settlement Clauses */}
             <div className="space-y-0.5 text-[8.5px] leading-tight text-slate-800">
               <div className="font-bold uppercase text-[9px] text-black border-b border-black pb-0.5">
-                4. TERMA PELAKSANAAN &amp; PEMBATALAN (SETTLEMENT &amp; CANCELLATION TERMS)
+                4. SETTLEMENT &amp; CANCELLATION TERMS
               </div>
               <ul className="list-disc pl-3.5 space-y-0.5">
-                <li><strong>Jaminan Dana:</strong> 100% dana disimpan dan dilindungi secara automatik di dalam Smart Contract Sui (Tanpa Akses Pihak Ketiga).</li>
-                <li><strong>Pembatalan Awal:</strong> Client berhak membatalkan dan menerima pemulangan 100% dana jika Lead Freelancer belum memulakan kerja.</li>
-                <li><strong>Penalti Penamatan Tengah Jalan:</strong> Jika pembatalan dibuat selepas kerja dimulakan, penalti 25% akan dibayar kepada team Freelancer sebagai pampasan masa.</li>
-                <li><strong>Pertikaian &amp; Resolusi AI:</strong> Sekiranya timbul ketidaksepakatan, SuiPact AI Mediator akan mengaudit bukti kerja dan mencadangkan penyelesaian adil sebelum pengesahan pelepasan bersama.</li>
+                <li><strong>Fund Guarantee:</strong> 100% of escrow funds are securely locked and protected on-chain in the Sui Move Smart Contract (Non-Custodial).</li>
+                <li><strong>Early Cancellation:</strong> Client reserves the right to cancel and receive a 100% refund if the Lead Freelancer has not commenced work.</li>
+                <li><strong>Mid-Project Termination:</strong> If cancellation occurs after work has begun, a 25% compensation penalty is allocated to the freelancer team.</li>
+                <li><strong>AI Dispute Resolution:</strong> If disagreements arise, SuiPact AI Mediator audits deliverable proofs and proposes an objective settlement before mutual release.</li>
               </ul>
             </div>
 
             {/* Section 5: Signature & Verification Blocks */}
             <div className="pt-1 border-t-2 border-black grid grid-cols-2 gap-3 text-[9px]">
               <div className="border border-black p-1.5 space-y-1">
-                <div className="font-bold uppercase text-[8.5px]">DISEDIAKAN &amp; DIKUNCI OLEH (CLIENT):</div>
+                <div className="font-bold uppercase text-[8.5px]">PREPARED &amp; LOCKED BY (CLIENT):</div>
                 <div className="h-5 flex items-center justify-center font-mono text-[8px] text-slate-500 italic bg-slate-50 rounded">
                   [ Cryptographically Signed via Sui zkLogin ]
                 </div>
                 <div className="border-t border-black pt-0.5 space-y-0.5">
-                  <div><strong>Nama:</strong> {escrow.clientName || 'Client Principal'}</div>
+                  <div><strong>Name:</strong> {escrow.clientName || 'Client Principal'}</div>
                   <div className="font-mono text-[7.5px] truncate"><strong>Address:</strong> {escrow.client}</div>
-                  <div><strong>Tarikh:</strong> {formatDate(escrow.createdAt)}</div>
+                  <div><strong>Date:</strong> {formatDate(escrow.createdAt)}</div>
                 </div>
               </div>
 
               <div className="border border-black p-1.5 space-y-1">
-                <div className="font-bold uppercase text-[8.5px]">DISAHKAN &amp; DITERIMA OLEH (LEAD FREELANCER):</div>
+                <div className="font-bold uppercase text-[8.5px]">VERIFIED &amp; ACCEPTED BY (LEAD FREELANCER):</div>
                 <div className="h-5 flex items-center justify-center font-mono text-[8px] text-slate-500 italic bg-slate-50 rounded">
                   {escrow.agreementStatus === 'accepted' ? (
                     <span className="text-black font-bold">[ VERIFIED &amp; ACCEPTED ON SUI NETWORK ]</span>
@@ -499,7 +499,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
                   )}
                 </div>
                 <div className="border-t border-black pt-0.5 space-y-0.5">
-                  <div><strong>Nama:</strong> {escrow.freelancerName || 'Lead Freelancer'}</div>
+                  <div><strong>Name:</strong> {escrow.freelancerName || 'Lead Freelancer'}</div>
                   <div className="font-mono text-[7.5px] truncate"><strong>Address:</strong> {escrow.leadFreelancer}</div>
                   <div><strong>Status:</strong> <span className="uppercase font-bold">{escrow.agreementStatus}</span></div>
                 </div>
@@ -508,7 +508,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
 
             {/* Footer Notice */}
             <div className="text-center text-[7.5px] text-slate-500 pt-0.5 border-t border-slate-200">
-              Dokumen ini dijana secara automatik oleh Protokol SuiPact. Sah diperakui oleh rantaian blok Sui Testnet tanpa memerlukan meterai fizikal.
+              This agreement is automatically generated by SuiPact Protocol. Cryptographically verified on the Sui Testnet blockchain without requiring physical seal.
             </div>
 
           </div>
