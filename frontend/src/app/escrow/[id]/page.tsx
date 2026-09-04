@@ -48,6 +48,7 @@ import {
   Scale,
   Clock,
   ArrowRight,
+  Plus,
 } from 'lucide-react';
 
 async function sha256Fingerprint(text: string): Promise<string> {
@@ -82,6 +83,7 @@ export default function EscrowDetailPage() {
   const escrow = getEscrowById(id);
 
   const [proofInput, setProofInput] = useState('');
+  const [proofLinks, setProofLinks] = useState<string[]>([]);
   const [proofFingerprint, setProofFingerprint] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -117,8 +119,14 @@ export default function EscrowDetailPage() {
 
   // Pre-fill deliverable URI, files, and comments if rework is requested
   useEffect(() => {
-    if (escrow?.isRevisionRequested && escrow.deliveryProofUri && !proofInput) {
-      setProofInput(escrow.deliveryProofUri);
+    if (escrow?.isRevisionRequested && escrow.deliveryProofUri) {
+      const existing = escrow.deliveryProofUri.split(' | ').map((s) => s.trim()).filter(Boolean);
+      if (existing.length > 0 && proofLinks.length === 0) {
+        setProofLinks(existing);
+      }
+      if (!proofInput) {
+        setProofInput(escrow.deliveryProofUri);
+      }
     }
     if (escrow?.deliverableFiles && escrow.deliverableFiles.length > 0 && deliverableFiles.length === 0) {
       setDeliverableFiles(escrow.deliverableFiles);
@@ -194,13 +202,6 @@ export default function EscrowDetailPage() {
   const isFreelancer = !!userAddr && !!escrow?.leadFreelancer && userAddr === escrow.leadFreelancer.toLowerCase();
   const isRecipient = escrow?.recipients.some((r) => r.recipient?.toLowerCase() === userAddr);
 
-  // Auto-open agreement for Lead Freelancer if pending
-  useEffect(() => {
-    if (escrow && isFreelancer && escrow.agreementStatus === 'pending') {
-      setShowAgreementModal(true);
-    }
-  }, [isFreelancer, escrow?.agreementStatus]);
-
   if (!escrow) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -230,6 +231,38 @@ export default function EscrowDetailPage() {
     if (val.trim().length > 5) {
       const hash = await sha256Fingerprint(val.trim());
       setProofFingerprint(hash);
+    } else if (proofLinks.length === 0) {
+      setProofFingerprint(null);
+    }
+  };
+
+  const handleAddProofLink = async () => {
+    const trimmed = proofInput.trim();
+    if (!trimmed) return;
+    const sanitized = sanitizeDeliverableUri(trimmed);
+    if (!sanitized.isValid || !sanitized.sanitizedUrl) {
+      setErrorMessage('Please enter a valid URL (e.g., https://github.com/..., https://figma.com/..., or domain.com)');
+      return;
+    }
+    if (!proofLinks.includes(sanitized.sanitizedUrl)) {
+      const updated = [...proofLinks, sanitized.sanitizedUrl];
+      setProofLinks(updated);
+      const hash = await sha256Fingerprint(updated.join(' | '));
+      setProofFingerprint(hash);
+    }
+    setProofInput('');
+    setErrorMessage(null);
+  };
+
+  const handleRemoveProofLink = async (index: number) => {
+    const updated = proofLinks.filter((_, i) => i !== index);
+    setProofLinks(updated);
+    if (updated.length > 0) {
+      const hash = await sha256Fingerprint(updated.join(' | '));
+      setProofFingerprint(hash);
+    } else if (proofInput.trim().length > 5) {
+      const hash = await sha256Fingerprint(proofInput.trim());
+      setProofFingerprint(hash);
     } else {
       setProofFingerprint(null);
     }
@@ -238,7 +271,15 @@ export default function EscrowDetailPage() {
   // Submit Deliverable (Lead Freelancer Only - supports URL, multiple files, and/or comments)
   const handleDeliver = async (e: React.FormEvent) => {
     e.preventDefault();
-    const hasProofUrl = proofInput.trim().length > 0;
+    const allLinks = [...proofLinks];
+    if (proofInput.trim()) {
+      const currentSanitized = sanitizeDeliverableUri(proofInput.trim());
+      if (currentSanitized.isValid && currentSanitized.sanitizedUrl && !allLinks.includes(currentSanitized.sanitizedUrl)) {
+        allLinks.push(currentSanitized.sanitizedUrl);
+      }
+    }
+
+    const hasProofUrl = allLinks.length > 0;
     const hasFiles = deliverableFiles.length > 0 || !!deliverableDocUrl;
     const hasComment = deliverableComment.trim().length > 0;
 
@@ -249,12 +290,7 @@ export default function EscrowDetailPage() {
 
     let sanitizedUrl: string | undefined = undefined;
     if (hasProofUrl) {
-      const sanitized = sanitizeDeliverableUri(proofInput);
-      if (!sanitized.isValid || !sanitized.sanitizedUrl) {
-        setErrorMessage('Security Warning: Deliverable URI must be a valid https://, ipfs://, or ar:// URI.');
-        return;
-      }
-      sanitizedUrl = sanitized.sanitizedUrl;
+      sanitizedUrl = allLinks.join(' | ');
     }
 
     setLoadingAction('deliver');
@@ -930,7 +966,7 @@ export default function EscrowDetailPage() {
                         )}
 
                         {/* 1. Optional Deliverable URI */}
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <label className="block text-xs font-extrabold text-slate-800">
                               {escrow.isRevisionRequested ? 'Update Deliverable Proof URI' : 'Deliverable Proof Link / URI'}
@@ -945,21 +981,70 @@ export default function EscrowDetailPage() {
                               <button
                                 type="button"
                                 key={idx}
-                                onClick={() => setProofInput(format)}
-                                className="rounded-lg bg-white border border-slate-200 px-2 py-0.5 text-slate-600 hover:border-blue-400 hover:text-blue-600 cursor-pointer"
+                                onClick={() => handleProofChange(format)}
+                                className="rounded-lg bg-white border border-slate-200 px-2 py-0.5 text-slate-600 hover:border-blue-400 hover:text-blue-600 cursor-pointer transition-colors"
                               >
                                 {format.split('/')[2]}
                               </button>
                             ))}
                           </div>
 
-                          <input
-                            type="text"
-                            placeholder="Paste Google Drive, Figma, GitHub PR, Canva, or Live Demo link (optional)..."
-                            value={proofInput}
-                            onChange={(e) => handleProofChange(e.target.value)}
-                            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none font-mono"
-                          />
+                          <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                placeholder="Paste Google Drive, Figma, GitHub PR, Canva, or Live Demo link (optional)..."
+                                value={proofInput}
+                                onChange={(e) => handleProofChange(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddProofLink();
+                                  }
+                                }}
+                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs text-slate-900 focus:border-blue-500 focus:outline-none font-mono placeholder:text-slate-400 shadow-2xs"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleAddProofLink}
+                              disabled={!proofInput.trim()}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              <span>Add Link</span>
+                            </button>
+                          </div>
+
+                          {/* Display added links as interactive chips/cards */}
+                          {proofLinks.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {proofLinks.map((link, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs text-blue-900 shadow-2xs animate-fade-in"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                  <a
+                                    href={link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-mono text-[11px] font-semibold text-blue-700 hover:underline max-w-[240px] sm:max-w-xs truncate"
+                                  >
+                                    {link}
+                                  </a>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveProofLink(idx)}
+                                    className="text-slate-400 hover:text-rose-600 p-0.5 rounded transition-colors cursor-pointer"
+                                    title="Remove link"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* 2. Multi-File Deliverable Uploads */}
