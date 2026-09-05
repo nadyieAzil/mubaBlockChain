@@ -111,6 +111,7 @@ export const DemoSandboxBar: React.FC = () => {
   // Sandbox state
   const [isOpen, setIsOpen] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
+  const [blockedNotice, setBlockedNotice] = useState<string | null>(null);
 
   // Chat mode state — when true, panel shows chat instead of sandbox controls
   const [chatMode, setChatMode] = useState(false);
@@ -170,9 +171,26 @@ export const DemoSandboxBar: React.FC = () => {
     loginWithDemo(PRESET_DEMO_ACCOUNTS[0]);
     router.push('/dashboard');
   };
-  const handleSwitchToAlice = () => loginWithDemo(PRESET_DEMO_ACCOUNTS[0]);
-  const handleSwitchToBob = () => loginWithDemo(PRESET_DEMO_ACCOUNTS[1]);
-  const handleSwitchToCharlie = () => loginWithDemo(PRESET_DEMO_ACCOUNTS[2]);
+  const handleSwitchToAlice = () => {
+    setBlockedNotice(null);
+    loginWithDemo(PRESET_DEMO_ACCOUNTS[0]);
+  };
+  const handleSwitchToBob = () => {
+    if (pathname === '/escrow/new') {
+      setBlockedNotice('⚠️ Action Blocked: You are currently creating a Secure Vault as Client (Alice). Please complete deposit & lock or cancel before switching to Freelancer (Bob).');
+      return;
+    }
+    setBlockedNotice(null);
+    loginWithDemo(PRESET_DEMO_ACCOUNTS[1]);
+  };
+  const handleSwitchToCharlie = () => {
+    if (pathname === '/escrow/new') {
+      setBlockedNotice('⚠️ Action Blocked: You are currently creating a Secure Vault as Client (Alice). Please complete deposit & lock or cancel before switching to Team Member (Charlie).');
+      return;
+    }
+    setBlockedNotice(null);
+    loginWithDemo(PRESET_DEMO_ACCOUNTS[2]);
+  };
   
   const handleFullReset = async () => {
     setIsResetting(true);
@@ -373,8 +391,21 @@ export const DemoSandboxBar: React.FC = () => {
             {!chatMode && (
               <div className="p-4 space-y-3 text-xs">
                 <p className="text-[11px] text-slate-300 leading-snug">
-                  Switch roles between <strong>Client</strong>, <strong>Lead Freelancer</strong>, &amp; <strong>Team Member</strong> to test escrow transparency and disputes.
+                  Switch roles between <strong>Client</strong>, <strong>Lead Freelancer</strong>, &amp; <strong>Team Member</strong> to test Secure Vault transparency and disputes.
                 </p>
+
+                {/* Blocked Action Notice on Create Vault page */}
+                {blockedNotice && (
+                  <div className="rounded-xl bg-amber-500/20 border border-amber-400/60 p-2.5 text-[11px] text-amber-200 font-semibold flex items-start justify-between gap-2 animate-fade-in">
+                    <div className="flex-1">{blockedNotice}</div>
+                    <button
+                      onClick={() => setBlockedNotice(null)}
+                      className="text-amber-300 hover:text-white shrink-0 font-bold p-0.5"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-3 gap-2">
                   <button type="button" onClick={handleSwitchToAlice}

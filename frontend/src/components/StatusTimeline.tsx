@@ -21,7 +21,7 @@ export const StatusTimeline: React.FC<TimelineProps> = ({ status, txHistory }) =
     {
       stepNumber: 1,
       title: '1. Deposit Locked',
-      desc: 'USDC deposited into shared Move escrow object',
+      desc: 'USDC deposited into shared Move secure vault object',
       isCompleted: status >= STATUS_CODES.LOCKED,
       isActive: status === STATUS_CODES.LOCKED,
       tx: txHistory.find((t) => t.action.toLowerCase().includes('created') || t.action.toLowerCase().includes('deposit')),
@@ -70,7 +70,7 @@ export const StatusTimeline: React.FC<TimelineProps> = ({ status, txHistory }) =
         <div className="flex items-center gap-2">
           <Shield className="h-4 w-4 text-blue-600" />
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
-            Escrow Milestones &amp; Sui Progress
+            Secure Vault Milestones &amp; Sui Progress
           </h3>
         </div>
         <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">

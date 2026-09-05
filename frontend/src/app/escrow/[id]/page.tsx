@@ -112,7 +112,7 @@ export default function EscrowDetailPage() {
 
   useEffect(() => {
     if (isNew && escrow) {
-      setSuccessMessage('Escrow created and full contract deposit locked successfully!');
+      setSuccessMessage('Secure Vault created and full contract deposit locked successfully!');
       window.history.replaceState(null, '', `/escrow/${id}`);
     }
   }, [isNew, escrow, id]);
@@ -149,13 +149,13 @@ export default function EscrowDetailPage() {
 
     const remainingSlots = MAX_DELIVERABLE_FILES - deliverableFiles.length;
     if (remainingSlots <= 0) {
-      setErrorMessage(`Had maksimum ${MAX_DELIVERABLE_FILES} fail deliverable telah dicapai bagi menjimatkan kuota Firebase Free Tier.`);
+      setErrorMessage(`Maximum limit of ${MAX_DELIVERABLE_FILES} deliverable files reached to conserve Firebase Free Tier quota.`);
       e.target.value = '';
       return;
     }
 
     if (files.length > remainingSlots) {
-      setErrorMessage(`Anda memilih ${files.length} fail, tetapi hanya ${remainingSlots} slot lagi tinggal (Maksimum ${MAX_DELIVERABLE_FILES} fail keseluruhan bagi Firebase Free Tier).`);
+      setErrorMessage(`You selected ${files.length} files, but only ${remainingSlots} slots remain (Maximum ${MAX_DELIVERABLE_FILES} files total for Firebase Free Tier).`);
       e.target.value = '';
       return;
     }
@@ -163,7 +163,7 @@ export default function EscrowDetailPage() {
     // Check individual file size limit (10MB)
     for (const file of Array.from(files)) {
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        setErrorMessage(`Fail "${file.name}" (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi had saiz ${MAX_FILE_SIZE_MB}MB bagi Firebase Free Tier. Sila gunakan fail yang lebih kecil atau pautan Google Drive/Figma.`);
+        setErrorMessage(`File "${file.name}" (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds the ${MAX_FILE_SIZE_MB}MB size limit for Firebase Free Tier. Please use a smaller file or a Google Drive/Figma link.`);
         e.target.value = '';
         return;
       }
@@ -207,8 +207,8 @@ export default function EscrowDetailPage() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg border border-slate-200 space-y-4">
           <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto" />
-          <h2 className="text-lg font-bold text-slate-900">Escrow Contract Not Found</h2>
-          <p className="text-xs text-slate-500">The escrow object with ID {formatAddress(id, 8)} does not exist or has expired.</p>
+          <h2 className="text-lg font-bold text-slate-900">Secure Vault Contract Not Found</h2>
+          <p className="text-xs text-slate-500">The secure vault object with ID {formatAddress(id, 8)} does not exist or has expired.</p>
           <Link
             href="/dashboard"
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
@@ -359,9 +359,9 @@ export default function EscrowDetailPage() {
     setErrorMessage(null);
     try {
       await refundClient(escrow.id);
-      setSuccessMessage('100% Escrow deposit refunded back to your wallet.');
+      setSuccessMessage('100% Secure Vault deposit refunded back to your wallet.');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to refund escrow.');
+      setErrorMessage(err.message || 'Failed to refund secure vault.');
     } finally {
       setLoadingAction(null);
     }
@@ -386,7 +386,7 @@ export default function EscrowDetailPage() {
     setLoadingAction('dispute');
     try {
       await raiseDispute(escrow.id);
-      setSuccessMessage('Formal dispute raised. Escrow funds locked pending AI-assisted mutual resolution.');
+      setSuccessMessage('Formal dispute raised. Secure Vault funds locked pending AI-assisted mutual resolution.');
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to raise dispute.');
     } finally {
@@ -518,7 +518,7 @@ export default function EscrowDetailPage() {
               </div>
 
               <div className="text-left md:text-right shrink-0 flex flex-col items-start md:items-end gap-1.5">
-                <div className="text-[10px] font-bold text-slate-400 uppercase">Total Escrow Value</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase">Total Secure Vault Value</div>
                 <div className="text-3xl font-extrabold text-slate-900">{formatUSDC(escrow.totalAmount)}</div>
                 {escrow.disputeVerdict?.isSettled ? (
                   <div className="text-[10px] font-extrabold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-0.5">
@@ -1055,7 +1055,7 @@ export default function EscrowDetailPage() {
                               <span>Attach Deliverables (PDFs, Posters, Documents)</span>
                             </label>
                             <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                              Had: Maksimum {MAX_DELIVERABLE_FILES} Fail · 10MB setiap satu (Firebase Free Tier)
+                              Limit: Maximum {MAX_DELIVERABLE_FILES} Files · 10MB each (Firebase Free Tier)
                             </span>
                           </div>
 
@@ -1068,7 +1068,7 @@ export default function EscrowDetailPage() {
                               <UploadCloud className="h-4 w-4 text-blue-600" />
                               <span>
                                 {deliverableFiles.length >= MAX_DELIVERABLE_FILES
-                                  ? `Had Fail Penuh (${MAX_DELIVERABLE_FILES}/${MAX_DELIVERABLE_FILES})`
+                                  ? `File Limit Reached (${MAX_DELIVERABLE_FILES}/${MAX_DELIVERABLE_FILES})`
                                   : isUploadingDeliverableDoc
                                   ? 'Uploading...'
                                   : `+ Add Deliverable Files (${deliverableFiles.length}/${MAX_DELIVERABLE_FILES})`}
@@ -1083,7 +1083,7 @@ export default function EscrowDetailPage() {
                               />
                             </label>
                             <span className="text-[11px] text-slate-500">
-                              PDF, Posters (PNG/JPG), DOCX, ZIP · Jimat kuota storan Firebase ({deliverableFiles.length}/{MAX_DELIVERABLE_FILES})
+                              PDF, Posters (PNG/JPG), DOCX, ZIP · Save Firebase storage quota ({deliverableFiles.length}/{MAX_DELIVERABLE_FILES})
                             </span>
                           </div>
 
@@ -1140,7 +1140,7 @@ export default function EscrowDetailPage() {
                         {/* Submit Action Button */}
                         <div className="flex items-center justify-between pt-2">
                           <span className="text-[11px] text-slate-500">
-                            {proofInput.trim() || deliverableFiles.length > 0 || deliverableComment.trim()
+                            {proofLinks.length > 0 || proofInput.trim() || deliverableFiles.length > 0 || deliverableDocUrl || deliverableComment.trim()
                               ? 'Ready to submit on Sui network'
                               : 'Provide a link, attach file(s), or write notes above'}
                           </span>
@@ -1150,7 +1150,7 @@ export default function EscrowDetailPage() {
                             disabled={
                               loadingAction === 'deliver' ||
                               isUploadingDeliverableDoc ||
-                              (!proofInput.trim() && deliverableFiles.length === 0 && !deliverableDocUrl && !deliverableComment.trim())
+                              (proofLinks.length === 0 && !proofInput.trim() && deliverableFiles.length === 0 && !deliverableDocUrl && !deliverableComment.trim())
                             }
                             className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-6 py-2.5 text-xs font-bold text-white shadow-sm transition-all cursor-pointer"
                           >
@@ -1377,7 +1377,7 @@ export default function EscrowDetailPage() {
                         <span>Team Member View: Transparent AI Dispute Oversight</span>
                       </div>
                       <p className="text-[11px] text-violet-700 pl-6">
-                        Sebagai ahli pasukan (sub-freelancer/designer), anda mempunyai hak ketelusan penuh melihat status pertikaian. Bahagian split anda (25% = ${((((escrow.totalAmount * 75) / 100) * 2500) / 10000).toFixed(2)} USDC mengikut ketetapan AI) akan dihantar terus ke alamat dompet Sui anda secara atomik sebaik sahaja Lead Freelancer dan Client mengesahkan penyelesaian.
+                        As a team member (sub-freelancer/designer), you have full transparency into the dispute status. Your split share (25% = ${((((escrow.totalAmount * 75) / 100) * 2500) / 10000).toFixed(2)} USDC as defined by AI) will be transferred directly and atomically to your Sui wallet once the Lead Freelancer and Client confirm the resolution.
                       </p>
                     </div>
                   )}

@@ -109,7 +109,7 @@ const GoogleConsentScreen: React.FC<GoogleConsentProps> = ({ onConfirm, onCancel
               {[
                 'See your name, email address, and profile picture',
                 'Derive your Sui testnet zkLogin address from your Google JWT',
-                'Associate your escrow orders with this Google identity',
+                'Associate your secure vault orders with this Google identity',
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs text-slate-700">
                   <CheckCircle2 className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
@@ -237,7 +237,7 @@ function LoginForm() {
   };
 
   const demoPersonas = [
-    { account: PRESET_DEMO_ACCOUNTS[0], Icon: Building2, desc: 'Client: Creates & funds escrow orders', iconColor: 'text-blue-600 bg-blue-50 border-blue-200' },
+    { account: PRESET_DEMO_ACCOUNTS[0], Icon: Building2, desc: 'Client: Creates & funds secure vaults', iconColor: 'text-blue-600 bg-blue-50 border-blue-200' },
     { account: PRESET_DEMO_ACCOUNTS[1], Icon: Code2, desc: 'Lead Freelancer: Submits deliverables & manages disputes', iconColor: 'text-amber-600 bg-amber-50 border-amber-200' },
     { account: PRESET_DEMO_ACCOUNTS[2], Icon: Users, desc: 'Team Member: Designer recipient in Bob\'s team', iconColor: 'text-violet-600 bg-violet-50 border-violet-200' },
   ];

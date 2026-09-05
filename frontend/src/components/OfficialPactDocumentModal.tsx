@@ -353,7 +353,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
                 <img src="/logo.png" alt="SuiPact" className="h-7 w-7 object-contain grayscale" />
                 <div>
                   <h1 className="text-sm font-bold tracking-tight uppercase leading-tight">SuiPact Network Protocol</h1>
-                  <p className="text-[9px] text-black">Zero-Gas Decentralized Service Escrow &amp; Smart Payouts</p>
+                  <p className="text-[9px] text-black">Zero-Gas Decentralized Service Secure Vault &amp; Smart Payouts</p>
                   <p className="text-[8px] text-slate-600 font-mono">Contract: 0x8c57edf140ac229fb7e11652e8d9dcded7fd63dda683adfd7fd9c5bed1db5a18</p>
                 </div>
               </div>
@@ -368,9 +368,9 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
 
             {/* Document Title Banner */}
             <div className="border border-black py-1 px-2 text-center bg-slate-100 font-bold uppercase tracking-wider text-[11px]">
-              OFFICIAL SERVICE AGREEMENT &amp; ESCROW PAYMENT ORDER
+              OFFICIAL SERVICE AGREEMENT &amp; SECURE VAULT PAYMENT ORDER
               <div className="text-[9px] font-normal lowercase tracking-normal text-slate-700">
-                (Official Sui Smart Contract Escrow Order &amp; Milestone Agreement)
+                (Official Sui Smart Contract Secure Vault Order &amp; Milestone Agreement)
               </div>
             </div>
 
@@ -400,7 +400,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
                     </td>
                   </tr>
                   <tr>
-                    <td className="p-1 bg-slate-100 font-bold border-r border-black">Total Locked Escrow Deposit</td>
+                    <td className="p-1 bg-slate-100 font-bold border-r border-black">Total Locked Secure Vault Deposit</td>
                     <td className="p-1 font-bold text-[11px]">
                       {formatUSDC(escrow.totalAmount)} USDC (100% Locked on Sui)
                     </td>
@@ -454,7 +454,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
                     );
                   })}
                   <tr className="bg-slate-100 font-bold border-t border-black">
-                    <td colSpan={3} className="p-0.5 border-r border-black text-right uppercase">Total Contract Escrow Value:</td>
+                    <td colSpan={3} className="p-0.5 border-r border-black text-right uppercase">Total Contract Secure Vault Value:</td>
                     <td className="p-0.5 border-r border-black text-center">100.0%</td>
                     <td className="p-0.5 text-right font-mono text-[10px]">{formatUSDC(escrow.totalAmount)}</td>
                   </tr>
@@ -468,7 +468,7 @@ export const OfficialPactDocumentModal: React.FC<OfficialPactDocumentModalProps>
                 4. SETTLEMENT &amp; CANCELLATION TERMS
               </div>
               <ul className="list-disc pl-3.5 space-y-0.5">
-                <li><strong>Fund Guarantee:</strong> 100% of escrow funds are securely locked and protected on-chain in the Sui Move Smart Contract (Non-Custodial).</li>
+                <li><strong>Fund Guarantee:</strong> 100% of secure vault funds are securely locked and protected on-chain in the Sui Move Smart Contract (Non-Custodial).</li>
                 <li><strong>Early Cancellation:</strong> Client reserves the right to cancel and receive a 100% refund if the Lead Freelancer has not commenced work.</li>
                 <li><strong>Mid-Project Termination:</strong> If cancellation occurs after work has begun, a 25% compensation penalty is allocated to the freelancer team.</li>
                 <li><strong>AI Dispute Resolution:</strong> If disagreements arise, SuiPact AI Mediator audits deliverable proofs and proposes an objective settlement before mutual release.</li>

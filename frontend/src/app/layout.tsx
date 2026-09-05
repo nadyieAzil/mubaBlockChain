@@ -9,9 +9,9 @@ import { Toast } from '@/components/Toast';
 import { DemoSandboxBar } from '@/components/DemoSandboxBar';
 
 export const metadata: Metadata = {
-  title: 'SuiPact — Zero-Gas Stablecoin Escrow & Atomic Split Payouts on Sui',
+  title: 'SuiPact — Zero-Gas Stablecoin Secure Vault & Atomic Split Payouts on Sui',
   description:
-    'A zero-gas, single-deliverable escrow on Sui Testnet that lets clients lock testnet USDC and atomically release split payouts to multiple freelancers in one signed transaction with zkLogin.',
+    'A zero-gas, single-deliverable secure payment vault on Sui Testnet that lets clients lock testnet USDC and atomically release split payouts to multiple freelancers in one signed transaction with zkLogin.',
 };
 
 export default function RootLayout({

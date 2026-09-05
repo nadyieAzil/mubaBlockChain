@@ -119,9 +119,9 @@ const MOCK_SERVICES: FreelanceService[] = [
       'AI prompt-to-Pact contract generator',
       'Automated milestone verification agent',
       'Multi-LLM fallback architecture (Gemini + DeepSeek)',
-      'Structured JSON extraction & auto-escrow wiring',
+      'Structured JSON extraction & auto-vault wiring',
     ],
-    description: 'Transform conversational English prompts into binding Sui escrow terms and AI arbitration agents using state-of-the-art LLMs.',
+    description: 'Transform conversational English prompts into binding Sui Secure Vault terms and AI arbitration agents using state-of-the-art LLMs.',
   },
   {
     id: 'srv-4',
@@ -218,7 +218,7 @@ export default function ServicesMarketplacePage() {
 
   const generateWhatsAppLink = (srv: FreelanceService) => {
     const text = encodeURIComponent(
-      `Hello ${srv.freelancerName}! 👋\n\nI saw your service on SuiPact: "${srv.title}".\nI am interested in hiring you. Let's discuss requirements and initiate a secure SuiPact Escrow PACT.`
+      `Hello ${srv.freelancerName}! 👋\n\nI saw your service on SuiPact: "${srv.title}".\nI am interested in hiring you. Let's discuss requirements and initiate a secure SuiPact Secure Vault PACT.`
     );
     return `https://wa.me/${srv.whatsappNumber}?text=${text}`;
   };
@@ -460,7 +460,7 @@ export default function ServicesMarketplacePage() {
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
               1. Inquire with the freelancer on WhatsApp to discuss project requirements.<br />
-              2. Agree on scope &amp; create an escrow PACT on SuiPact.<br />
+              2. Agree on scope &amp; create a Secure Vault PACT on SuiPact.<br />
               3. Funds are locked safely in the Sui Move smart contract and disbursed automatically upon milestone approval.
             </p>
           </div>
@@ -469,7 +469,7 @@ export default function ServicesMarketplacePage() {
             href="/escrow/new"
             className="shrink-0 inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 px-5 py-3 text-xs font-bold text-white shadow-md shadow-blue-600/20 transition-all active:scale-95"
           >
-            <span>Start an Escrow PACT</span>
+            <span>Start a Secure Vault PACT</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

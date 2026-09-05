@@ -394,7 +394,7 @@ export default function LandingPage() {
                 <li className="flex items-start gap-2.5">
                   <span className="rounded-full bg-rose-200 p-1 text-rose-800 font-bold shrink-0 mt-0.5">✕</span>
                   <div>
-                    <strong>7–14 Day Settlement Delays:</strong> Legacy banking and off-chain escrow platforms impose artificial waiting periods and chargeback risks.
+                    <strong>7–14 Day Settlement Delays:</strong> Legacy banking and off-chain vault platforms impose artificial waiting periods and chargeback risks.
                   </div>
                 </li>
                 <li className="flex items-start gap-2.5">
@@ -459,7 +459,7 @@ export default function LandingPage() {
             Motivation &amp; Technical Challenges Solved
           </h2>
           <p className="text-slate-600 mt-2 max-w-3xl text-sm sm:text-base leading-relaxed">
-            Why has Web3 escrow failed to disrupt Web2 until now? Gas complexity, seed phrases, and multi-signature friction. Sui fundamentally fixes this.
+            Why has Web3 escrow and payment vaults failed to disrupt Web2 until now? Gas complexity, seed phrases, and multi-signature friction. Sui fundamentally fixes this.
           </p>
 
           <div className="grid md:grid-cols-3 gap-6 mt-10">
@@ -544,7 +544,7 @@ export default function LandingPage() {
               </p>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between border-b border-blue-200/60 pb-1.5">
-                  <span className="text-slate-600">Sui Move Gas per Escrow:</span>
+                  <span className="text-slate-600">Sui Move Gas per Secure Vault:</span>
                   <span className="font-extrabold text-slate-900">~$0.003 USD</span>
                 </div>
                 <div className="flex justify-between border-b border-blue-200/60 pb-1.5">
@@ -556,7 +556,7 @@ export default function LandingPage() {
                   <span className="font-black text-blue-700">≈ $0.009 USD</span>
                 </div>
                 <div className="flex justify-between pt-1 text-emerald-700 font-extrabold">
-                  <span>Cost for 1,000 Escrows/Mo:</span>
+                  <span>Cost for 1,000 Secure Vaults/Mo:</span>
                   <span>Only ~$25.00 / month!</span>
                 </div>
               </div>
@@ -578,7 +578,7 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                  <span><strong>DeFi Yield (Navi / Scallop):</strong> Yield on escrow deposits</span>
+                  <span><strong>DeFi Yield (Navi / Scallop):</strong> Yield on secure vault deposits</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
@@ -586,7 +586,7 @@ export default function LandingPage() {
                 </li>
               </ul>
               <div className="pt-2 text-xs font-bold text-emerald-800">
-                💡 1 single sponsor ($200/mo) funds 8,000+ free escrows!
+                💡 1 single sponsor ($200/mo) funds 8,000+ free secure vaults!
               </div>
             </div>
 
@@ -602,7 +602,7 @@ export default function LandingPage() {
               <div className="rounded-2xl bg-white border border-violet-200 p-3.5 space-y-1.5 text-xs text-violet-950">
                 <div className="font-extrabold text-violet-900">99% Gas Recycled on Completion</div>
                 <p className="text-[11px] text-slate-600">
-                  When an escrow object is settled and finalized, up to 99% of storage fees are refunded back to the sponsor wallet automatically.
+                  When a secure vault object is settled and finalized, up to 99% of storage fees are refunded back to the sponsor wallet automatically.
                 </p>
               </div>
               <div className="text-xs font-bold text-violet-700">
@@ -766,7 +766,7 @@ export default function LandingPage() {
             Try SuiPact Live on Sui Testnet Today
           </h2>
           <p className="text-blue-100 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            Experience gasless, non-custodial milestone escrows with automated AI arbitration and instant atomic team payouts.
+            Experience gasless, non-custodial milestone secure vaults with automated AI arbitration and instant atomic team payouts.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">

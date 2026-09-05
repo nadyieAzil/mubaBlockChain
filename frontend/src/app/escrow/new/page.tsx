@@ -88,6 +88,8 @@ export default function NewEscrowPage() {
   const [attachedDocUrl, setAttachedDocUrl] = useState<string>('');
   const [attachedDocName, setAttachedDocName] = useState<string>('');
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Pre-fill from query parameters if navigated from Services Marketplace
   React.useEffect(() => {
@@ -105,7 +107,7 @@ export default function NewEscrowPage() {
     }
   }, []);
 
-  // Role Gate: Only Clients can create and fund escrows
+  // Role Gate: Only Clients can create and fund secure vaults
   if (user && user.role !== 'client') {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -116,12 +118,12 @@ export default function NewEscrowPage() {
           <div>
             <h2 className="text-xl font-extrabold text-slate-900">Client Access Required</h2>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              Escrow creation and contract funding is reserved for hiring Client accounts. You are currently logged in as <strong>{user.name} ({user.role === 'freelancer' ? 'Freelancer' : 'Team Member'})</strong>.
+              Secure Vault creation and contract funding is reserved for hiring Client accounts. You are currently logged in as <strong>{user.name} ({user.role === 'freelancer' ? 'Freelancer' : 'Team Member'})</strong>.
             </p>
           </div>
 
           <div className="rounded-2xl bg-blue-50 border border-blue-200 p-4 text-xs text-blue-900 text-left space-y-2">
-            <p className="font-bold">Want to test creating an Escrow?</p>
+            <p className="font-bold">Want to test creating a Secure Vault?</p>
             <p className="text-blue-800 text-[11px]">
               Switch persona to <strong>Alice (Client)</strong> to create contracts, lock testnet USDC deposits, and define multi-recipient payout splits.
             </p>
@@ -147,9 +149,6 @@ export default function NewEscrowPage() {
       </div>
     );
   }
-
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleApplyAIResult = (result: {
     title: string;
@@ -289,7 +288,7 @@ export default function NewEscrowPage() {
       return;
     }
     if (totalAmount <= 0) {
-      setError('Total project escrow amount must be greater than $0.');
+      setError('Total project secure vault amount must be greater than $0.');
       return;
     }
 
@@ -307,7 +306,7 @@ export default function NewEscrowPage() {
       });
       router.push(`/escrow/${created.id}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to create escrow order.');
+      setError(err.message || 'Failed to create secure vault order.');
       setSubmitting(false);
     }
   };
@@ -424,8 +423,8 @@ export default function NewEscrowPage() {
               {/* Total Budget Clarification */}
               <div className="pt-2">
                 <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                  Total Escrow Amount (Full Contract Value) <span className="text-rose-500">*</span>
-                  <Tooltip text="This represents 100% of the project budget locked into the Sui smart contract, not a partial deposit." />
+                  Total Secure Vault Amount (Full Contract Value) <span className="text-rose-500">*</span>
+                  <Tooltip text="This represents 100% of the project budget locked into the Sui smart contract payment vault, not a partial deposit." />
                 </label>
                 <div className="relative">
                   <input
@@ -697,7 +696,7 @@ export default function NewEscrowPage() {
             {/* Submit Row */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
               <div>
-                <div className="text-xs text-slate-500 font-semibold">Total Escrow Budget:</div>
+                <div className="text-xs text-slate-500 font-semibold">Total Secure Vault Budget:</div>
                 <div className="text-2xl font-extrabold text-slate-900">{formatUSDC(totalAmount)}</div>
                 <div className="text-xs text-emerald-600 font-bold mt-0.5">$0.00 Gas · Dual-Signed &amp; Sponsored</div>
               </div>
@@ -710,7 +709,7 @@ export default function NewEscrowPage() {
                 {submitting ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Locking on Sui Testnet...</>
                 ) : (
-                  <><Lock className="h-4 w-4" /> Deposit &amp; Lock Escrow</>
+                  <><Lock className="h-4 w-4" /> Deposit &amp; Lock Secure Vault</>
                 )}
               </button>
             </div>
@@ -754,7 +753,7 @@ export default function NewEscrowPage() {
                     <span className="font-bold text-emerald-600 font-mono">$0.00 (Testnet Free)</span>
                   </div>
                   <div className="flex items-center justify-between pt-2">
-                    <span className="font-extrabold text-slate-800">Total Escrow Deposit:</span>
+                    <span className="font-extrabold text-slate-800">Total Secure Vault Deposit:</span>
                     <span className="font-black text-base text-blue-700 font-mono">{formatUSDC(totalAmount)}</span>
                   </div>
                 </div>
@@ -775,7 +774,7 @@ export default function NewEscrowPage() {
                   Guaranteed On-Chain Terms
                 </div>
                 <p className="text-slate-500 text-[11px] leading-relaxed">
-                  Upon project approval, Sui Move splits the escrow amount directly into each recipient’s wallet in <strong>a single atomic transaction</strong>. If work is not delivered, Client can cancel and claim a full refund.
+                  Upon project approval, Sui Move splits the vault deposit directly into each recipient’s wallet in <strong>a single atomic transaction</strong>. If work is not delivered, Client can cancel and claim a full refund.
                 </p>
               </div>
             </div>
