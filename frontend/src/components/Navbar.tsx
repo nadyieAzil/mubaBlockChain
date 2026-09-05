@@ -70,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({ sticky = true }) => {
               <div>
                 <span className="text-lg font-extrabold text-white tracking-tight">SuiPact</span>
                 <div className="text-[10px] text-blue-200 font-medium hidden sm:block leading-none mt-0.5">
-                  Zero-Gas Escrow · Sui Testnet
+                  Zero-Gas Payment Vault &amp; AI · Sui Testnet
                 </div>
               </div>
             </Link>
@@ -78,7 +78,8 @@ export const Navbar: React.FC<NavbarProps> = ({ sticky = true }) => {
 
           {/* Right Section */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {user ? (
+            {/* On landing page ('/'), always present clean guest state without active account */}
+            {user && pathname !== '/' ? (
               <>
                 {/* Clear Wallet Balance Button */}
                 <button

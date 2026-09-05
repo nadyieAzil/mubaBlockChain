@@ -27,8 +27,7 @@ interface FreelanceService {
   rating: number;
   reviewsCount: number;
   completedPacts: number;
-  priceSui: number;
-  priceUsd: number;
+  priceUsdc: number;
   deliveryDays: string;
   suiVerified: boolean;
   whatsappNumber: string; // e.g. "60123456789"
@@ -51,7 +50,7 @@ const CATEGORIES = [
 const MOCK_SERVICES: FreelanceService[] = [
   {
     id: 'srv-1',
-    title: 'Custom Sui Move v2 Smart Contract & Atomic Escrow PTBs',
+    title: 'Custom Sui Move v2 Smart Contract & Atomic Split Payment Vaults',
     category: 'Sui Move & Smart Contracts',
     freelancerName: 'Hafiz Radzi',
     freelancerRole: 'Senior Sui Move Architect',
@@ -60,8 +59,7 @@ const MOCK_SERVICES: FreelanceService[] = [
     rating: 4.98,
     reviewsCount: 34,
     completedPacts: 48,
-    priceSui: 450,
-    priceUsd: 1450,
+    priceUsdc: 1450,
     deliveryDays: '4 Days',
     suiVerified: true,
     whatsappNumber: '60123456789',
@@ -86,8 +84,7 @@ const MOCK_SERVICES: FreelanceService[] = [
     rating: 4.95,
     reviewsCount: 29,
     completedPacts: 41,
-    priceSui: 380,
-    priceUsd: 1220,
+    priceUsdc: 1220,
     deliveryDays: '5 Days',
     suiVerified: true,
     whatsappNumber: '60198765432',
@@ -112,8 +109,7 @@ const MOCK_SERVICES: FreelanceService[] = [
     rating: 4.92,
     reviewsCount: 19,
     completedPacts: 26,
-    priceSui: 520,
-    priceUsd: 1670,
+    priceUsdc: 1670,
     deliveryDays: '6 Days',
     suiVerified: true,
     whatsappNumber: '60172348901',
@@ -138,8 +134,7 @@ const MOCK_SERVICES: FreelanceService[] = [
     rating: 5.0,
     reviewsCount: 42,
     completedPacts: 55,
-    priceSui: 800,
-    priceUsd: 2560,
+    priceUsdc: 2560,
     deliveryDays: '7 Days',
     suiVerified: true,
     whatsappNumber: '601156781234',
@@ -164,8 +159,7 @@ const MOCK_SERVICES: FreelanceService[] = [
     rating: 4.88,
     reviewsCount: 22,
     completedPacts: 31,
-    priceSui: 950,
-    priceUsd: 3040,
+    priceUsdc: 3040,
     deliveryDays: '12 Days',
     suiVerified: true,
     whatsappNumber: '60134567890',
@@ -190,8 +184,7 @@ const MOCK_SERVICES: FreelanceService[] = [
     rating: 4.96,
     reviewsCount: 38,
     completedPacts: 47,
-    priceSui: 280,
-    priceUsd: 890,
+    priceUsdc: 890,
     deliveryDays: '3 Days',
     suiVerified: true,
     whatsappNumber: '60189012345',
@@ -255,7 +248,7 @@ export default function ServicesMarketplacePage() {
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all active:scale-95"
               >
                 <Plus className="h-4 w-4" />
-                <span>Create Custom Escrow</span>
+                <span>Create Payment Vault</span>
               </Link>
             </div>
           </div>
@@ -408,15 +401,15 @@ export default function ServicesMarketplacePage() {
                 <div className="mt-5 pt-4 border-t border-slate-100 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="flex items-baseline gap-1">
+                      <div className="flex items-baseline gap-1.5">
                         <span className="text-lg font-black text-slate-900 font-mono">
-                          {srv.priceSui} SUI
+                          ${srv.priceUsdc.toLocaleString()}
                         </span>
-                        <span className="text-[11px] text-slate-500">
-                          (~${srv.priceUsd.toLocaleString()})
+                        <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
+                          USDC
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 text-[10.5px] text-slate-500">
+                      <div className="flex items-center gap-1 text-[10.5px] text-slate-500 mt-0.5">
                         <Clock className="h-3 w-3" />
                         <span>Delivery: {srv.deliveryDays}</span>
                       </div>
@@ -440,10 +433,10 @@ export default function ServicesMarketplacePage() {
                     </a>
 
                     <Link
-                      href={`/escrow/new?title=${encodeURIComponent(srv.title)}&amount=${srv.priceSui}&freelancer=${encodeURIComponent(srv.freelancerName)}`}
+                      href={`/escrow/new?title=${encodeURIComponent(srv.title)}&amount=${srv.priceUsdc}&freelancer=${encodeURIComponent(srv.freelancerName)}`}
                       className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 hover:bg-blue-600 text-white px-3 py-2.5 text-xs font-bold transition-all active:scale-95 shadow-sm"
                     >
-                      <span>Hire Escrow</span>
+                      <span>Hire &amp; Lock Funds</span>
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
@@ -463,7 +456,7 @@ export default function ServicesMarketplacePage() {
               <span>How Hiring on SuiPact Works</span>
             </div>
             <h3 className="text-lg sm:text-xl font-black text-slate-900">
-              Direct WhatsApp Communication + Zero-Gas Escrow Protection
+              Direct WhatsApp Communication + Zero-Gas Payment Vault Protection
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
               1. Inquire with the freelancer on WhatsApp to discuss project requirements.<br />

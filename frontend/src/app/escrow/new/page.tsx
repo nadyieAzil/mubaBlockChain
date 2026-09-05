@@ -329,10 +329,10 @@ export default function NewEscrowPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            Create Zero-Gas Escrow Contract
+            Create Zero-Gas Secure Payment Vault
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Deposit USDC onto the Sui network. Funds are programmatically released to multiple team recipients upon verified milestone completion.
+            Lock USDC into a smart contract payment vault on Sui. Funds remain safe and are automatically split to team recipients once you approve deliverables.
           </p>
         </div>
 
@@ -343,7 +343,7 @@ export default function NewEscrowPage() {
           className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-500/20 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] transition-all cursor-pointer"
         >
           <Sparkles className="h-4 w-4 text-yellow-300 animate-pulse" />
-          <span>Auto-Fill with AI Copilot</span>
+          <span>Track 02: AI Pact Generator</span>
         </button>
       </div>
 

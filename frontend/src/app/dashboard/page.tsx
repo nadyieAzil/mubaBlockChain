@@ -315,7 +315,7 @@ export default function DashboardPage() {
                 href="/escrow/new"
                 className="flex items-center gap-2 rounded-2xl bg-white px-5 py-2.5 text-sm font-bold text-blue-700 shadow-md hover:bg-blue-50 transition-all cursor-pointer"
               >
-                <Plus className="h-4 w-4" /> Create New Escrow
+                <Plus className="h-4 w-4" /> Create Secure Vault
               </Link>
             ) : (
               <div className="flex items-center gap-1.5 rounded-2xl bg-white/10 border border-white/20 px-4 py-2.5 text-xs font-bold text-yellow-200 shadow-inner">
@@ -340,7 +340,7 @@ export default function DashboardPage() {
                 <div className={`text-xl font-extrabold ${s.color}`}>
                   <AnimatedCounter value={s.value} prefix="$" suffix=" USDC" decimals={0} duration={1200} />
                 </div>
-                <div className="text-[11px] text-blue-300 mt-0.5">{myEscrows.length} contracts</div>
+                <div className="text-[11px] text-blue-300 mt-0.5">{myEscrows.length} vaults</div>
               </div>
             ))}
           </div>
@@ -359,7 +359,7 @@ export default function DashboardPage() {
             <div className="flex-1">
               <p className="font-extrabold text-blue-950">Freelancer Workspace &amp; Assigned Orders</p>
               <p className="text-blue-800 text-[11px] mt-0.5 leading-relaxed">
-                You are currently viewing all contracts where you are assigned as Lead Freelancer or Team Recipient. Review client agreements, submit deliverables, and track instant split payouts. (New escrows are created &amp; funded by hiring Clients).
+                You are currently viewing all contracts where you are assigned as Lead Freelancer or Team Recipient. Review client agreements, submit deliverables, and track instant split payouts. (New payment vaults are created &amp; funded by hiring Clients).
               </p>
             </div>
           </div>

@@ -47,7 +47,7 @@ export const AppSidebar: React.FC = () => {
                   {isClient ? 'CLIENT PORTAL' : isFreelancer ? 'FREELANCER HUB' : 'SUIPACT WORKSPACE'}
                 </span>
                 <span className="text-[10px] text-blue-300 font-semibold block">
-                  MUBA Sui Track 01
+                  MUBA Tracks 01 &amp; 02
                 </span>
               </div>
             </Link>
@@ -104,7 +104,7 @@ export const AppSidebar: React.FC = () => {
                 </span>
               </div>
               <span className={`text-[10px] truncate block ${isActive('/dashboard') ? 'text-blue-100' : 'text-slate-400'}`}>
-                Active Escrows &amp; Milestones
+                Active Vaults &amp; Milestones
               </span>
             </div>
           </Link>
@@ -140,15 +140,15 @@ export const AppSidebar: React.FC = () => {
                 </span>
               </div>
               <span className={`text-[10px] truncate block ${isActive('/services') ? 'text-blue-100' : 'text-slate-400'}`}>
-                Gigs &amp; WhatsApp Direct
+                USDC Gigs &amp; WhatsApp
               </span>
             </div>
             <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30 shrink-0">
-              New
+              USDC
             </span>
           </Link>
 
-          {/* 3. Create Escrow */}
+          {/* 3. Create Secure Vault */}
           {isClient ? (
             <Link
               href="/escrow/new"
@@ -176,18 +176,18 @@ export const AppSidebar: React.FC = () => {
                     03
                   </span>
                   <span className="text-xs font-extrabold truncate block text-white">
-                    Create Escrow
+                    Create Secure Vault
                   </span>
                 </div>
                 <span className={`text-[10px] truncate block ${isActive('/escrow/new') ? 'text-blue-100' : 'text-slate-400'}`}>
-                  Zero-Gas PTB Agreement
+                  Zero-Gas Locked Vault
                 </span>
               </div>
             </Link>
           ) : (
             <div
               className="w-full flex items-center gap-3 p-3 rounded-2xl text-left text-slate-500 bg-[#090f23]/60 border border-[#1b264f]/50 cursor-not-allowed opacity-60"
-              title="Only Clients can create new escrows"
+              title="Only Clients can create new vaults"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#141f42]/50 border border-[#223366]/50 text-slate-600">
                 <Plus className="h-5 w-5" />
@@ -195,7 +195,7 @@ export const AppSidebar: React.FC = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-mono font-bold text-slate-600">03</span>
-                  <span className="text-xs font-bold truncate block text-slate-500">Create Escrow</span>
+                  <span className="text-xs font-bold truncate block text-slate-500">Create Secure Vault</span>
                 </div>
                 <span className="text-[10px] text-slate-600 truncate block">Client only action</span>
               </div>

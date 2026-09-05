@@ -84,8 +84,11 @@ export function AIPactBuilderModal({ isOpen, onClose, onApply }: AIPactBuilderMo
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-900">SuiPact AI Scope Builder</h2>
-              <p className="text-xs text-slate-500 font-medium">Powered by OpenRouter & GPT-4o-mini / Gemini</p>
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-[9.5px] font-extrabold text-indigo-700 uppercase tracking-wider mb-0.5">
+                <span>Hackathon Track 02: SUI x AI</span>
+              </div>
+              <h2 className="text-lg font-black text-slate-900">SuiPact AI Scope &amp; Split Generator</h2>
+              <p className="text-xs text-slate-500 font-medium">Powered by Gemini 2.0 Flash · Converts English prompts into Move pacts</p>
             </div>
           </div>
           <button

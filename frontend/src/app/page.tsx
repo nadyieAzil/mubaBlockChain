@@ -51,11 +51,11 @@ export default function LandingPage() {
   const [activeSlide, setActiveSlide] = useState<string>('overview');
 
   const pitchSections = [
-    { id: 'overview', num: '00', label: 'Overview & Hero', icon: Sparkles, desc: 'Zero-Gas Escrow & Atomic Splits' },
+    { id: 'overview', num: '00', label: 'Overview & Hero', icon: Sparkles, desc: 'Zero-Gas Payment Vault & Splits' },
     { id: 'problem-objective', num: '01', label: 'Problem & Objective', icon: Target, desc: '20% Fee Trap & Disjoint Splits' },
     { id: 'motivation-challenges', num: '02', label: 'Motivation & Challenges', icon: Rocket, desc: 'Gas Tokens, zkLogin & PTBs' },
     { id: 'business-model', num: '03', label: 'Business & Ads Model', icon: DollarSign, desc: 'Ecosystem Sponsorships & Unit Econ' },
-    { id: 'tech-stack', num: '04', label: 'Tech Stack & Track 01', icon: Cpu, desc: 'Sui Move v2 & Multi-LLM AI' },
+    { id: 'tech-stack', num: '04', label: 'Tracks 01 & 02: Move & AI', icon: Cpu, desc: 'Sui Move v2 & Gemini 2.0 AI' },
     { id: 'architecture-concept', num: '05', label: 'Overall Architecture', icon: Layers, desc: '5-Stage Autonomous Lifecycle' },
     { id: 'savings-calculator', num: '06', label: 'Interactive ROI Calc', icon: BarChart3, desc: 'Real Savings vs. Web2 Freelancing' },
     { id: 'evaluation', num: '07', label: 'Judge Evaluation & Demo', icon: Award, desc: 'Live Sui Testnet Demo & zkLogin' },
@@ -126,7 +126,7 @@ export default function LandingPage() {
                   Pitch Deck Nav
                 </span>
                 <span className="text-[10px] text-blue-300 font-semibold block">
-                  MUBA Sui Track 01
+                  MUBA Tracks 01 &amp; 02
                 </span>
               </div>
             </div>
@@ -160,32 +160,24 @@ export default function LandingPage() {
               <button
                 key={sec.id}
                 onClick={() => scrollToSection(sec.id)}
-                className={`w-full flex items-start gap-3 p-2.5 rounded-2xl text-left transition-all cursor-pointer group relative ${
+                className={`w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition-all cursor-pointer group ${
                   isActive
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-white/20'
-                    : 'text-slate-300 hover:bg-[#131d3f]/60 hover:text-white'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 ring-1 ring-blue-400/40'
+                    : 'text-slate-300 hover:bg-[#131d3f]/60 hover:text-white border border-transparent hover:border-[#1f2e60]'
                 }`}
               >
-                {/* Active Indicator Bar */}
-                {isActive && (
-                  <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-yellow-300 shadow-sm" />
-                )}
-
-                {/* Number Badge / Icon */}
                 <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-mono text-xs font-black transition-colors ${
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all ${
                     isActive
-                      ? 'bg-white/20 text-white border border-white/30'
+                      ? 'bg-white/20 text-white border border-white/30 shadow-inner'
                       : 'bg-[#141f42] border border-[#223366] text-slate-400 group-hover:text-yellow-300 group-hover:border-yellow-300/30'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-4.5 w-4.5" />
                 </div>
-
-                {/* Text Labels */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className={`text-[10px] font-mono font-extrabold ${isActive ? 'text-yellow-300' : 'text-slate-500 group-hover:text-slate-400'}`}>
+                    <span className={`text-[10px] font-mono font-bold ${isActive ? 'text-yellow-300' : 'text-blue-400'}`}>
                       {sec.num}
                     </span>
                     <span className="text-xs font-bold truncate leading-snug">
@@ -278,9 +270,11 @@ export default function LandingPage() {
             <div className="flex flex-wrap items-center justify-center gap-3 mb-6 animate-fade-in">
               <div className="inline-flex items-center gap-2 rounded-full border border-yellow-400/40 bg-yellow-500/20 backdrop-blur-sm px-4 py-1.5 text-xs font-extrabold text-yellow-200">
                 <span className="flex h-2 w-2 rounded-full bg-yellow-300 animate-pulse" />
-                MUBA Blockchain Hackathon 2026
+                MUBA Hackathon 2026
                 <span className="text-yellow-400">|</span>
-                <span className="text-white font-semibold">Sui Track 01: Payments &amp; Stablecoins</span>
+                <span className="text-white font-semibold">Track 01: Payments &amp; Stablecoins</span>
+                <span className="text-yellow-400">·</span>
+                <span className="text-yellow-300 font-bold">Track 02: SUI x AI</span>
               </div>
               <a
                 href={getSuiVisionPackageUrl()}
@@ -300,9 +294,9 @@ export default function LandingPage() {
 
           {/* Main headline */}
           <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight max-w-4xl mx-auto ${mounted ? 'animate-fade-in-up delay-100' : 'opacity-0'}`}>
-            Zero-Commission Freelance Escrow with{' '}
+            Zero-Commission Freelance Payment Vault with{' '}
             <span className="relative">
-              <span className="text-yellow-300">Atomic Team Splits</span>
+              <span className="text-yellow-300">Atomic Splits &amp; AI</span>
               <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 300 8" fill="none">
                 <path d="M2 6C60 2 180 2 298 6" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" className="animate-draw-line" />
               </svg>
@@ -310,7 +304,7 @@ export default function LandingPage() {
           </h1>
 
           <p className={`mt-6 mx-auto max-w-3xl text-base sm:text-lg text-blue-100 leading-relaxed ${mounted ? 'animate-fade-in-up delay-200' : 'opacity-0'}`}>
-            Lock USDC into Move smart contracts, evaluate milestones with OpenRouter AI, and disburse instant multi-recipient team payouts —{' '}
+            Lock USDC into Move smart contracts, evaluate deliverable milestones with Gemini 2.0 AI, and disburse instant multi-recipient team payouts —{' '}
             <strong className="text-white">all in a single Sui Programmable Transaction Block (PTB)</strong> with{' '}
             <strong className="text-yellow-300">10 free sponsored transactions/month</strong> and Google zkLogin.
           </p>
@@ -320,11 +314,11 @@ export default function LandingPage() {
             {user ? (
               <>
                 <Link href="/dashboard" className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-white px-8 py-4 text-sm font-extrabold text-blue-700 shadow-lg shadow-blue-900/20 hover:bg-blue-50 active:scale-[0.98] transition-all">
-                  Go to Orders Dashboard <ArrowRight className="h-4 w-4" />
+                  Go to Active Vaults <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link href="/escrow/new" className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm px-8 py-4 text-sm font-extrabold text-white hover:bg-white/20 transition-all">
                   <Zap className="h-4 w-4 text-yellow-300" />
-                  Create New Escrow
+                  Create New Payment Vault
                 </Link>
               </>
             ) : (
@@ -631,21 +625,21 @@ export default function LandingPage() {
             <Cpu className="h-4 w-4" /> Pitch Pillar 04
           </div>
           <h2 className="text-3xl sm:text-4xl font-black text-slate-900">
-            Technology Stack &amp; Hackathon Track
+            Technology Stack &amp; Dual Hackathon Tracks
           </h2>
           <p className="text-slate-600 mt-2 max-w-3xl text-sm sm:text-base leading-relaxed">
-            Engineered exclusively for <strong>Sui Track 01: Payments &amp; Stablecoins</strong> with production-grade Move contracts and multi-model AI arbitration.
+            Engineered to bridge <strong>Sui Track 01: Payments &amp; Stablecoins</strong> (zero-gas USDC payment vaults &amp; atomic PTB team splits) and <strong>Sui Track 02: SUI x AI</strong> (autonomous Gemini 2.0 agreement generation, deliverable auditing, dispute arbitration, and AI Co-Pilot).
           </p>
 
           <div className="grid md:grid-cols-2 gap-8 mt-10">
             {/* Tech Stack Components */}
             <div className="space-y-3">
               {[
-                { name: 'Sui Move Smart Contracts (v2)', desc: 'Object-centric escrow module with shared state, basis-point vector disbursement, and 9/9 unit tests.', badge: 'Move 2024', color: 'bg-blue-100 text-blue-700' },
-                { name: 'Programmable Transaction Blocks', desc: 'Atomic execution composing coin splits and multi-recipient transfers in one sub-second block.', badge: 'PTB Engine', color: 'bg-emerald-100 text-emerald-700' },
-                { name: 'OpenRouter Multi-LLM AI Suite', desc: 'Gemini 2.0 Flash for instant pact generation + Claude 3.5 Sonnet for deep dispute arbitration.', badge: 'AI Oracle', color: 'bg-violet-100 text-violet-700' },
-                { name: 'Google zkLogin Authentication', desc: 'Zero-knowledge credential derivation for seedless, one-click Web2 Google onboarding.', badge: 'zkLogin', color: 'bg-amber-100 text-amber-700' },
-                { name: 'Gas Relayer & Faucet Backend', desc: 'Express.js backend with Ed25519 keypair sponsorship and 10 tx/mo quota rate limiter.', badge: 'Node.js', color: 'bg-slate-100 text-slate-700' },
+                { name: 'Sui Move Smart Contracts (v2)', desc: 'Object-centric payment vault module with shared state, basis-point vector disbursement, and 9/9 unit tests.', badge: 'Track 01 · Move', color: 'bg-blue-100 text-blue-700' },
+                { name: 'Atomic Programmable Transaction Blocks', desc: 'Atomic execution composing coin splits and multi-recipient transfers in one sub-second block.', badge: 'Track 01 · PTB', color: 'bg-emerald-100 text-emerald-700' },
+                { name: 'Gemini 2.0 AI Pact Generator', desc: 'Converts unstructured English prompts into locked milestone agreements, deliverable rubrics, and basis-point split distributions.', badge: 'Track 02 · SUI x AI', color: 'bg-violet-100 text-violet-700' },
+                { name: 'Autonomous AI Deliverable & Dispute Auditor', desc: 'Live GitHub/Figma artifact verification and mathematical arbitration verdicts for fair dispute resolutions.', badge: 'Track 02 · SUI x AI', color: 'bg-indigo-100 text-indigo-700' },
+                { name: 'Google zkLogin & Sponsored Gas Relayer', desc: 'Zero-knowledge Web2 onboarding with 10 sponsored zero-gas transactions per month.', badge: 'zkLogin & Gas', color: 'bg-amber-100 text-amber-700' },
               ].map((item, idx) => (
                 <div key={idx} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex items-start justify-between gap-4">
                   <div>
